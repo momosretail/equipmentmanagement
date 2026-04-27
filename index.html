@@ -172,7 +172,11 @@ let editTarget = null;
 
 // ── 날짜 유틸 ─────────────────────────────────────────────
 const today = () => new Date().toISOString().slice(0,10);
-const fmt = iso => iso ? String(iso).slice(0,10).replace(/-/g,'.') : '';
+const fmt = iso => {
+  if (!iso) return '';
+  const [y,m,d] = String(iso).slice(0,10).split('-');
+  return `${y}. ${parseInt(m)}. ${parseInt(d)}`;
+};
 const diffDays = (a,b) => Math.round((new Date(b)-new Date(a))/86400000);
 const addDays = (iso,n) => { const d=new Date(iso); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
 
@@ -180,14 +184,15 @@ const addDays = (iso,n) => { const d=new Date(iso); d.setDate(d.getDate()+n); re
 function status(nextIso) {
   if (!nextIso) return {label:'미입력', cls:'none'};
   const d = diffDays(today(), String(nextIso).slice(0,10));
-  if (d < 0)   return {label:`D+${Math.abs(d)}`, cls:'overdue'};
-  if (d <= 7)  return {label:`D-${d}`,           cls:'danger'};
-  if (d <= 30) return {label:`D-${d}`,           cls:'warning'};
-  return             {label:`D-${d}`,             cls:'ok'};
+  if (d < 0)   return {label:`${Math.abs(d)}일 경과`, cls:'overdue'};
+  if (d <= 7)  return {label:`${d}일 남음`,           cls:'danger'};
+  if (d <= 30) return {label:`${d}일 남음`,           cls:'warning'};
+  return             {label:`${d}일 남음`,             cls:'ok'};
 }
 
 // ── 데이터 로딩 ───────────────────────────────────────────
 async function loadData() {
+  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec') { showGuide(); return; }
   showLoading();
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?action=getData`);
@@ -273,7 +278,7 @@ function renderDevice(dev, parts) {
       </div>
       <table class="parts-table">
         <thead><tr>
-          <th>부품명</th><th>주기</th><th>마지막 교체</th><th>다음 예정</th><th>D-day</th><th>비고</th><th></th>
+          <th>부품명</th><th>주기</th><th>마지막 교체일자</th><th>다음 교체일자</th><th>다음 교체일자로부터 경과일수</th><th>비고</th><th></th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
