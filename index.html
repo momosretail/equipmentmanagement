@@ -188,7 +188,6 @@ function status(nextIso) {
 
 // ── 데이터 로딩 ───────────────────────────────────────────
 async function loadData() {
-  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec') { showGuide(); return; }
   showLoading();
   try {
     const res = await fetch(`${APPS_SCRIPT_URL}?action=getData`);
