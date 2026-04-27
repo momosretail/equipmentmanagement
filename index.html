@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>장비 교체 주기 관리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f4f2ee;
+  --surface:#ffffff;
+  --surface2:#f9f8f5;
+  --border:#e2dfd8;
+  --border2:#d0cdc5;
+  --text:#1a1916;
+  --muted:#7a7770;
+  --ok-bg:#e8f2de;    --ok:#3a6b10;
+  --warn-bg:#fdf0d8;  --warn:#8a5200;
+  --danger-bg:#fce9e9;--danger:#9e2a2a;
+  --none-bg:#efefed;  --none:#7a7770;
+  --accent:#1a1916;
+  --r:8px;
+  --mono:'DM Mono',monospace;
+  --sans:'Noto Sans KR',sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── Page ── */
+.page{max-width:1080px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+
+/* ── Header ── */
+.header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2rem;gap:1rem;flex-wrap:wrap;}
+.header-left h1{font-size:20px;font-weight:600;letter-spacing:-0.02em;}
+.header-left .sub{font-size:12px;color:var(--muted);margin-top:3px;font-family:var(--mono);}
+.header-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.date-chip{font-size:11px;font-family:var(--mono);color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;}
+.refresh-btn{font-size:12px;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:6px 14px;cursor:pointer;font-family:var(--sans);}
+
+/* ── Summary ── */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.75rem;}
+.s-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1rem;}
+.s-label{font-size:11px;color:var(--muted);margin-bottom:5px;}
+.s-num{font-size:26px;font-weight:600;font-family:var(--mono);line-height:1;}
+.s-card.c-danger .s-num{color:var(--danger);}
+.s-card.c-warn   .s-num{color:var(--warn);}
+.s-card.c-ok     .s-num{color:var(--ok);}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap;}
+.tab{padding:7px 18px;border-radius:20px;border:1px solid var(--border);background:var(--surface);font-size:13px;color:var(--muted);cursor:pointer;font-family:var(--sans);transition:all .15s;}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* ── Category block ── */
+.cat-block{margin-bottom:1.5rem;}
+.cat-title{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.cat-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── Device block ── */
+.device-block{margin-bottom:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.device-header{padding:.7rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+.device-name{font-size:13px;font-weight:600;}
+.device-status{display:flex;gap:5px;flex-wrap:wrap;}
+.mini-badge{font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:10px;font-weight:500;}
+.mini-badge.ok     {background:var(--ok-bg);    color:var(--ok);}
+.mini-badge.warning{background:var(--warn-bg);  color:var(--warn);}
+.mini-badge.danger {background:var(--danger-bg);color:var(--danger);}
+.mini-badge.none   {background:var(--none-bg);  color:var(--none);}
+
+/* ── Parts table ── */
+.parts-table{width:100%;border-collapse:collapse;}
+.parts-table th{font-size:10px;color:var(--muted);font-weight:500;padding:6px 1rem;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2);}
+.parts-table td{font-size:12px;padding:8px 1rem;border-bottom:1px solid var(--border);vertical-align:middle;}
+.parts-table tr:last-child td{border-bottom:none;}
+.parts-table tr:hover td{background:#faf9f6;}
+.part-name{font-weight:500;}
+.part-interval{font-family:var(--mono);color:var(--muted);font-size:11px;}
+.date-val{font-family:var(--mono);font-size:11px;}
+.date-empty{color:var(--none);font-style:italic;font-size:11px;}
+.dday{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.dday.ok     {background:var(--ok-bg);    color:var(--ok);}
+.dday.warning{background:var(--warn-bg);  color:var(--warn);}
+.dday.danger {background:var(--danger-bg);color:var(--danger);}
+.dday.overdue{background:var(--danger-bg);color:var(--danger);}
+.dday.none   {background:var(--none-bg);  color:var(--none);}
+.edit-btn{font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;cursor:pointer;font-family:var(--sans);}
+.edit-btn:hover{color:var(--text);border-color:var(--border2);}
+.note-text{font-size:10px;color:var(--muted);font-style:italic;}
+
+/* ── States ── */
+.state-box{text-align:center;padding:3rem 1rem;color:var(--muted);}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 1rem;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.state-icon{font-size:28px;margin-bottom:.75rem;}
+
+/* ── Modal ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:200;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:1.5rem;width:360px;max-width:94vw;}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:3px;}
+.modal .msub{font-size:11px;color:var(--muted);margin-bottom:1.25rem;font-family:var(--mono);}
+.modal label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;margin-top:12px;}
+.modal input[type=date]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);font-family:var(--sans);}
+.auto-btn{margin-top:8px;font-size:11px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;font-family:var(--sans);}
+.modal-btns{display:flex;gap:8px;margin-top:1.25rem;}
+.modal-btns button{flex:1;padding:9px;border-radius:6px;border:1px solid var(--border);font-size:13px;cursor:pointer;font-family:var(--sans);}
+.btn-cancel{background:var(--bg);color:var(--muted);}
+.btn-save{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500;}
+.btn-save:disabled{opacity:.45;cursor:not-allowed;}
+.saving{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;display:none;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(60px);background:var(--accent);color:#fff;font-size:12px;padding:9px 20px;border-radius:20px;opacity:0;transition:all .25s;z-index:999;pointer-events:none;white-space:nowrap;font-family:var(--sans);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── Responsive ── */
+@media(max-width:600px){
+  .summary{grid-template-columns:repeat(2,1fr);}
+  .parts-table th:nth-child(3),.parts-table td:nth-child(3),
+  .parts-table th:nth-child(4),.parts-table td:nth-child(4){display:none;}
+  .header{flex-direction:column;align-items:flex-start;}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-left">
+      <h1>장비 교체 주기 관리</h1>
+      <div class="sub" id="today-label"></div>
+    </div>
+    <div class="header-right">
+      <div class="date-chip" id="date-chip"></div>
+      <button class="refresh-btn" onclick="loadData()">↻ 새로고침</button>
+    </div>
+  </div>
+  <div id="app"></div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="modal">
+  <div class="modal">
+    <h3 id="m-title"></h3>
+    <div class="msub" id="m-sub"></div>
+    <label>마지막 교체일</label>
+    <input type="date" id="m-last">
+    <label>다음 교체 예정일</label>
+    <input type="date" id="m-next">
+    <button class="auto-btn" onclick="autoCalc()">교체주기로 자동계산</button>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-save" id="m-save" onclick="saveModal()">저장</button>
+    </div>
+    <div class="saving" id="m-saving">저장 중...</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 설정 ──────────────────────────────────────────────────
+// ↓ Apps Script 배포 후 URL 붙여넣기
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec';
+
+const STORES = ['본점','영도','마린시티','도모헌'];
+
+// ── 상태 ──────────────────────────────────────────────────
+let allData = null;
+let activeStore = STORES[0];
+let editTarget = null;
+
+// ── 날짜 유틸 ─────────────────────────────────────────────
+const today = () => new Date().toISOString().slice(0,10);
+const fmt = iso => iso ? String(iso).slice(0,10).replace(/-/g,'.') : '';
+const diffDays = (a,b) => Math.round((new Date(b)-new Date(a))/86400000);
+const addDays = (iso,n) => { const d=new Date(iso); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+
+// ── 상태 계산 ─────────────────────────────────────────────
+function status(nextIso) {
+  if (!nextIso) return {label:'미입력', cls:'none'};
+  const d = diffDays(today(), String(nextIso).slice(0,10));
+  if (d < 0)   return {label:`D+${Math.abs(d)}`, cls:'overdue'};
+  if (d <= 7)  return {label:`D-${d}`,           cls:'danger'};
+  if (d <= 30) return {label:`D-${d}`,           cls:'warning'};
+  return             {label:`D-${d}`,             cls:'ok'};
+}
+
+// ── 데이터 로딩 ───────────────────────────────────────────
+async function loadData() {
+  if (APPS_SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec') { showGuide(); return; }
+  showLoading();
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getData`);
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    allData = json.data;
+    render();
+  } catch(e) { showError(e.message); }
+}
+
+// ── 렌더 ──────────────────────────────────────────────────
+function render() {
+  const t = today();
+  document.getElementById('today-label').textContent = `본점 · 영도 · 마린시티 · 도모헌`;
+  document.getElementById('date-chip').textContent = `기준 ${fmt(t)}`;
+
+  // 전체 요약
+  let danger=0, warn=0, ok=0, none=0;
+  STORES.forEach(s => {
+    const sd = allData[s] || {};
+    Object.values(sd).forEach(cat => Object.values(cat).forEach(dev =>
+      dev.forEach(p => {
+        const st = status(p.next);
+        if (st.cls==='danger'||st.cls==='overdue') danger++;
+        else if (st.cls==='warning') warn++;
+        else if (st.cls==='ok') ok++;
+        else none++;
+      })
+    ));
+  });
+
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="summary">
+      <div class="s-card c-danger"><div class="s-label">위험 (D-7 이내)</div><div class="s-num">${danger}</div></div>
+      <div class="s-card c-warn">  <div class="s-label">주의 (D-30 이내)</div><div class="s-num">${warn}</div></div>
+      <div class="s-card c-ok">    <div class="s-label">정상</div><div class="s-num">${ok}</div></div>
+      <div class="s-card">         <div class="s-label">날짜 미입력</div><div class="s-num" style="color:var(--muted)">${none}</div></div>
+    </div>
+    <div class="tabs">${STORES.map(s=>`<button class="tab ${s===activeStore?'active':''}" onclick="selectStore('${s}')">${s}</button>`).join('')}</div>
+    <div id="store-content"></div>
+  `;
+  renderStore();
+}
+
+function renderStore() {
+  const sd = allData[activeStore] || {};
+  const el = document.getElementById('store-content');
+  if (!Object.keys(sd).length) { el.innerHTML='<div class="state-box"><div class="state-icon">📭</div><p>데이터가 없습니다.</p></div>'; return; }
+
+  el.innerHTML = Object.entries(sd).map(([cat, devices]) => `
+    <div class="cat-block">
+      <div class="cat-title">${cat}</div>
+      ${Object.entries(devices).map(([dev, parts]) => renderDevice(dev, parts)).join('')}
+    </div>
+  `).join('');
+}
+
+function renderDevice(dev, parts) {
+  const badges = parts.map(p => {
+    const st = status(p.next);
+    return `<span class="mini-badge ${st.cls}">${p.part} ${st.label}</span>`;
+  }).join('');
+
+  const rows = parts.map(p => {
+    const st = status(p.next);
+    return `<tr>
+      <td><span class="part-name">${p.part}</span></td>
+      <td><span class="part-interval">${p.interval}개월</span></td>
+      <td><span class="date-val">${p.last ? fmt(p.last) : ''}</span>${!p.last?'<span class="date-empty">미입력</span>':''}</td>
+      <td><span class="date-val">${p.next ? fmt(p.next) : ''}</span>${!p.next?'<span class="date-empty">미입력</span>':''}</td>
+      <td><span class="dday ${st.cls}">${st.label}</span></td>
+      <td>${p.note?`<span class="note-text">${p.note}</span>`:''}</td>
+      <td><button class="edit-btn" onclick="openModal('${activeStore}','${esc(dev)}','${esc(p.part)}',${p.interval},'${p.last}','${p.next}')">수정</button></td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div class="device-block">
+      <div class="device-header">
+        <span class="device-name">${dev}</span>
+        <div class="device-status">${badges}</div>
+      </div>
+      <table class="parts-table">
+        <thead><tr>
+          <th>부품명</th><th>주기</th><th>마지막 교체</th><th>다음 예정</th><th>D-day</th><th>비고</th><th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+const esc = s => String(s).replace(/'/g,"\\'");
+function selectStore(s) { activeStore=s; renderStore(); document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.textContent===s)); }
+
+// ── 모달 ──────────────────────────────────────────────────
+function openModal(store, dev, part, interval, last, next) {
+  editTarget = {store, dev, part, interval};
+  document.getElementById('m-title').textContent = part;
+  document.getElementById('m-sub').textContent = `${store} · ${dev} · ${interval}개월 주기`;
+  document.getElementById('m-last').value = last || '';
+  document.getElementById('m-next').value = next || '';
+  document.getElementById('m-save').disabled = false;
+  document.getElementById('m-saving').style.display = 'none';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); editTarget=null; }
+function autoCalc() {
+  const last = document.getElementById('m-last').value;
+  if (!last || !editTarget) return;
+  document.getElementById('m-next').value = addDays(last, editTarget.interval * 30);
+}
+async function saveModal() {
+  if (!editTarget) return;
+  const last = document.getElementById('m-last').value;
+  const next = document.getElementById('m-next').value;
+  document.getElementById('m-save').disabled = true;
+  document.getElementById('m-saving').style.display = 'block';
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      body: JSON.stringify({action:'updateRow', store:editTarget.store, device:editTarget.dev, part:editTarget.part, last, next})
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    // 로컬 업데이트
+    const sd = allData[editTarget.store];
+    Object.values(sd).forEach(cat => {
+      if (cat[editTarget.dev]) cat[editTarget.dev].forEach(p => {
+        if (p.part === editTarget.part) { p.last=last; p.next=next; }
+      });
+    });
+    closeModal(); renderStore(); showToast('저장 완료 ✓');
+  } catch(e) {
+    document.getElementById('m-save').disabled=false;
+    document.getElementById('m-saving').style.display='none';
+    showToast('저장 실패: '+e.message);
+  }
+}
+
+// ── 상태 화면 ─────────────────────────────────────────────
+function showLoading() { document.getElementById('app').innerHTML='<div class="state-box"><div class="spinner"></div><p>불러오는 중...</p></div>'; }
+function showError(m)  { document.getElementById('app').innerHTML=`<div class="state-box"><div class="state-icon">⚠</div><p>로딩 실패<br><small>${m}</small></p></div>`; }
+function showGuide()   {
+  document.getElementById('date-chip').textContent = `기준 ${fmt(today())}`;
+  document.getElementById('app').innerHTML=`<div class="state-box"><div class="state-icon">🔧</div><p style="text-align:left;max-width:420px;margin:0 auto;line-height:2">
+    <b>설정 필요</b><br>
+    1. Google Sheets 새 파일 생성<br>
+    2. Apps Script > Code.gs 코드 붙여넣기<br>
+    3. <code>setup()</code> 실행 (최초 1회)<br>
+    4. 배포 > 새 배포 > 웹 앱 > 모든 사용자<br>
+    5. 생성된 URL을 이 파일의 <code>APPS_SCRIPT_URL</code>에 붙여넣기
+  </p></div>`;
+}
+
+// ── 토스트 ────────────────────────────────────────────────
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ── 초기화 ────────────────────────────────────────────────
+document.getElementById('modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
+loadData();
+</script>
+</body>
+</html>
