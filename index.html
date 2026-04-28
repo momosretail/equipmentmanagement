@@ -1,503 +1,1154 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>장비 교체 주기 관리</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{
-  --bg:#f4f2ee; --surface:#fff; --surface2:#f9f8f5;
-  --border:#e2dfd8; --border2:#d0cdc5; --text:#1a1916; --muted:#7a7770;
-  --ok-bg:#e8f2de; --ok:#3a6b10;
-  --warn-bg:#fdf0d8; --warn:#8a5200;
-  --danger-bg:#fce9e9; --danger:#9e2a2a;
-  --none-bg:#efefed; --none:#7a7770;
-  --accent:#1a1916; --r:8px;
-  --mono:'DM Mono',monospace; --sans:'Noto Sans KR',sans-serif;
-}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;}
-.page{max-width:1080px;margin:0 auto;padding:2rem 1.5rem 5rem;}
-.header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2rem;gap:1rem;flex-wrap:wrap;}
-.header-left h1{font-size:20px;font-weight:600;letter-spacing:-0.02em;}
-.header-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.date-chip{font-size:11px;font-family:var(--mono);color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:5px 12px;}
-.refresh-btn{font-size:12px;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:6px 14px;cursor:pointer;}
-.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.75rem;}
-.s-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1rem;}
-.s-label{font-size:11px;color:var(--muted);margin-bottom:5px;}
-.s-num{font-size:26px;font-weight:600;font-family:var(--mono);line-height:1;}
-.s-card.c-danger .s-num{color:var(--danger);}
-.s-card.c-warn .s-num{color:var(--warn);}
-.s-card.c-ok .s-num{color:var(--ok);}
-.tabs{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap;}
-.tab{padding:7px 18px;border-radius:20px;border:1px solid var(--border);background:var(--surface);font-size:13px;color:var(--muted);cursor:pointer;transition:all .15s;}
-.tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
-.tab.admin-tab{border-color:var(--border2);}
-.tab.admin-tab.active{background:#2d5a8e;border-color:#2d5a8e;}
-.cat-block{margin-bottom:1.5rem;}
-.cat-title{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.cat-title::after{content:'';flex:1;height:1px;background:var(--border);}
-.device-block{margin-bottom:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
-.device-header{padding:.7rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
-.device-name{font-size:13px;font-weight:600;}
-.device-status{display:flex;gap:5px;flex-wrap:wrap;}
-.mini-badge{font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:10px;font-weight:500;}
-.mini-badge.ok{background:var(--ok-bg);color:var(--ok);}
-.mini-badge.warning{background:var(--warn-bg);color:var(--warn);}
-.mini-badge.danger{background:var(--danger-bg);color:var(--danger);}
-.mini-badge.overdue{background:var(--danger-bg);color:var(--danger);}
-.mini-badge.none{background:var(--none-bg);color:var(--none);}
-.parts-table{width:100%;border-collapse:collapse;}
-.parts-table th{font-size:10px;color:var(--muted);font-weight:500;padding:6px 1rem;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2);}
-.parts-table td{font-size:12px;padding:8px 1rem;border-bottom:1px solid var(--border);vertical-align:middle;}
-.parts-table tr:last-child td{border-bottom:none;}
-.parts-table tr:hover td{background:#faf9f6;}
-.part-name{font-weight:500;}
-.part-interval{font-family:var(--mono);color:var(--muted);font-size:11px;}
-.date-val{font-family:var(--mono);font-size:11px;}
-.date-empty{color:var(--none);font-style:italic;font-size:11px;}
-.dday{display:inline-flex;align-items:center;font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;white-space:nowrap;}
-.dday.ok{background:var(--ok-bg);color:var(--ok);}
-.dday.warning{background:var(--warn-bg);color:var(--warn);}
-.dday.danger{background:var(--danger-bg);color:var(--danger);}
-.dday.overdue{background:var(--danger-bg);color:var(--danger);}
-.dday.none{background:var(--none-bg);color:var(--none);}
-.edit-btn{font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;cursor:pointer;}
-.edit-btn:hover{color:var(--text);border-color:var(--border2);}
-.note-text{font-size:10px;color:var(--muted);font-style:italic;}
-/* 관리자 탭 */
-.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:1.5rem;}
-.admin-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;}
-.admin-card .store-badge{font-size:10px;font-weight:600;color:#2d5a8e;background:#e8f0fb;border-radius:20px;padding:2px 10px;display:inline-block;margin-bottom:10px;}
-.admin-field{margin-bottom:8px;}
-.admin-field label{font-size:10px;color:var(--muted);display:block;margin-bottom:3px;}
-.admin-field input{width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);font-family:var(--sans);}
-.admin-field input:focus{outline:none;border-color:var(--border2);}
-.admin-save-btn{width:100%;margin-top:10px;padding:7px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;}
-.alert-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;}
-.alert-section h3{font-size:14px;font-weight:600;margin-bottom:4px;}
-.alert-section p{font-size:12px;color:var(--muted);margin-bottom:1rem;}
-.alert-btn{padding:8px 20px;background:#2d5a8e;color:#fff;border:none;border-radius:20px;font-size:13px;cursor:pointer;}
-.alert-btn:disabled{opacity:.5;cursor:not-allowed;}
-.alert-list{margin-top:1rem;}
-.alert-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;gap:8px;flex-wrap:wrap;}
-.alert-item:last-child{border-bottom:none;}
-.alert-store{font-size:10px;color:#2d5a8e;background:#e8f0fb;border-radius:10px;padding:1px 8px;}
-/* States */
-.state-box{text-align:center;padding:3rem 1rem;color:var(--muted);}
-.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 1rem;}
-@keyframes spin{to{transform:rotate(360deg);}}
-/* Modal */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:200;align-items:center;justify-content:center;}
-.overlay.open{display:flex;}
-.modal{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:1.5rem;width:360px;max-width:94vw;}
-.modal h3{font-size:15px;font-weight:600;margin-bottom:3px;}
-.modal .msub{font-size:11px;color:var(--muted);margin-bottom:1.25rem;font-family:var(--mono);}
-.modal label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;margin-top:12px;}
-.modal input[type=date]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);}
-.auto-btn{margin-top:8px;font-size:11px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;}
-.modal-btns{display:flex;gap:8px;margin-top:1.25rem;}
-.modal-btns button{flex:1;padding:9px;border-radius:6px;border:1px solid var(--border);font-size:13px;cursor:pointer;}
-.btn-cancel{background:var(--bg);color:var(--muted);}
-.btn-save{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500;}
-.btn-save:disabled{opacity:.45;cursor:not-allowed;}
-.saving{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;display:none;}
-.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(60px);background:var(--accent);color:#fff;font-size:12px;padding:9px 20px;border-radius:20px;opacity:0;transition:all .25s;z-index:999;pointer-events:none;white-space:nowrap;}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-@media(max-width:600px){
-  .summary{grid-template-columns:repeat(2,1fr);}
-  .parts-table th:nth-child(3),.parts-table td:nth-child(3),
-  .parts-table th:nth-child(4),.parts-table td:nth-child(4){display:none;}
-  .header{flex-direction:column;align-items:flex-start;}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>장비 교체 주기 관리</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+    *, * ::before, * ::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    :root {
+        --bg: #f4f2ee;
+        --surface: #fff;
+        --surface2: #f9f8f5;
+        --border: #e2dfd8;
+        --border2: #d0cdc5;
+        --text: #1a1916;
+        --muted: #7a7770;
+        --ok-bg: #e8f2de;
+        --ok: #3a6b10;
+        --warn-bg: #fdf0d8;
+        --warn: #8a5200;
+        --danger-bg: #fce9e9;
+        --danger: #9e2a2a;
+        --none-bg: #efefed;
+        --none: #7a7770;
+        --accent: #1a1916;
+        --r: 8px;
+        --mono: 'DM Mono', monospace;
+        --sans: 'Noto Sans KR', sans-serif;
+    }
+
+    body {
+        font-family: var(--sans);
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+    }
+
+    .page {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 5rem;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 2rem;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .header-left h1 {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+    }
+
+    .header-right {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .date-chip {
+        font-size: 11px;
+        font-family: var(--mono);
+        color: var(--muted);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 5px 12px;
+    }
+
+    .refresh-btn {
+        font-size: 12px;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        padding: 6px 14px;
+        cursor: pointer;
+    }
+
+    .summary {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-bottom: 1.75rem;
+    }
+
+    .s-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: .9rem 1rem;
+    }
+
+    .s-label {
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 5px;
+    }
+
+    .s-num {
+        font-size: 26px;
+        font-weight: 600;
+        font-family: var(--mono);
+        line-height: 1;
+    }
+
+    .s-card.c-danger .s-num {
+        color: var(--danger);
+    }
+
+    .s-card.c-warn .s-num {
+        color: var(--warn);
+    }
+
+    .s-card.c-ok .s-num {
+        color: var(--ok);
+    }
+
+    .tabs {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 1.25rem;
+        flex-wrap: wrap;
+    }
+
+    .tab {
+        padding: 7px 18px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        font-size: 13px;
+        color: var(--muted);
+        cursor: pointer;
+        transition: all .15s;
+    }
+
+    .tab.active {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+    }
+
+    .tab.admin-tab.active {
+        background: #2d5a8e;
+        border-color: #2d5a8e;
+    }
+
+    .cat-block {
+        margin-bottom: 1.5rem;
+    }
+
+    .cat-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .cat-title::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+    }
+
+    .device-block {
+        margin-bottom: 1rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        overflow: hidden;
+    }
+
+    .device-header {
+        padding: .7rem 1rem;
+        background: var(--surface2);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .5rem;
+        flex-wrap: wrap;
+    }
+
+    .device-name {
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .device-status {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    .mini-badge {
+        font-size: 10px;
+        font-family: var(--mono);
+        padding: 2px 7px;
+        border-radius: 10px;
+        font-weight: 500;
+    }
+
+    .mini-badge.ok {
+        background: var(--ok-bg);
+        color: var(--ok);
+    }
+
+    .mini-badge.warning {
+        background: var(--warn-bg);
+        color: var(--warn);
+    }
+
+    .mini-badge.danger, .mini-badge.overdue {
+        background: var(--danger-bg);
+        color: var(--danger);
+    }
+
+    .mini-badge.none {
+        background: var(--none-bg);
+        color: var(--none);
+    }
+
+    .parts-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .parts-table th {
+        font-size: 10px;
+        color: var(--muted);
+        font-weight: 500;
+        padding: 6px 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface2);
+    }
+
+    .parts-table td {
+        font-size: 12px;
+        padding: 8px 1rem;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+    }
+
+    .parts-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .parts-table tr:hover td {
+        background: #faf9f6;
+    }
+
+    .part-name {
+        font-weight: 500;
+    }
+
+    .part-interval {
+        font-family: var(--mono);
+        color: var(--muted);
+        font-size: 11px;
+    }
+
+    .date-val {
+        font-family: var(--mono);
+        font-size: 11px;
+    }
+
+    .date-empty {
+        color: var(--none);
+        font-style: italic;
+        font-size: 11px;
+    }
+
+    .dday {
+        display: inline-flex;
+        align-items: center;
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 10px;
+        white-space: nowrap;
+    }
+
+    .dday.ok {
+        background: var(--ok-bg);
+        color: var(--ok);
+    }
+
+    .dday.warning {
+        background: var(--warn-bg);
+        color: var(--warn);
+    }
+
+    .dday.danger, .dday.overdue {
+        background: var(--danger-bg);
+        color: var(--danger);
+    }
+
+    .dday.none {
+        background: var(--none-bg);
+        color: var(--none);
+    }
+
+    .edit-btn {
+        font-size: 11px;
+        color: var(--muted);
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 3px 8px;
+        cursor: pointer;
+    }
+
+    .edit-btn:hover {
+        color: var(--text);
+        border-color: var(--border2);
+    }
+
+    .note-text {
+        font-size: 10px;
+        color: var(--muted);
+        font-style: italic;
+    }/* 관리자 탭 */
+
+    .admin-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+        margin-bottom: 1.5rem;
+    }
+
+    .admin-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 1.1rem 1.25rem;
+    }
+
+    .store-badge {
+        font-size: 10px;
+        font-weight: 600;
+        color: #2d5a8e;
+        background: #e8f0fb;
+        border-radius: 20px;
+        padding: 2px 10px;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+
+    .admin-field {
+        margin-bottom: 8px;
+    }
+
+    .admin-field label {
+        font-size: 10px;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 3px;
+    }
+
+    .admin-field input {
+        width: 100%;
+        font-size: 12px;
+        padding: 5px 8px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: var(--bg);
+        color: var(--text);
+    }
+
+    .admin-field input:focus {
+        outline: none;
+        border-color: var(--border2);
+    }
+
+    .admin-save-btn {
+        width: 100%;
+        margin-top: 10px;
+        padding: 7px;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .alert-section {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 1.25rem;
+    }
+
+    .alert-section h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .alert-section .alert-desc {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 1rem;
+    }
+
+    .alert-btn {
+        padding: 8px 20px;
+        background: #2d5a8e;
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        font-size: 13px;
+        cursor: pointer;
+        margin-top: 1rem;
+    }
+
+    .alert-btn:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+
+    .alert-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .alert-item:last-child {
+        border-bottom: none;
+    }
+
+    .alert-store {
+        font-size: 10px;
+        color: #2d5a8e;
+        background: #e8f0fb;
+        border-radius: 10px;
+        padding: 1px 8px;
+        white-space: nowrap;
+    }/* States */
+
+    .state-box {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--muted);
+    }
+
+    .spinner {
+        width: 24px;
+        height: 24px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin .7s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }/* Modal */
+
+    .overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .38);
+        z-index: 200;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .overlay.open {
+        display: flex;
+    }
+
+    .modal {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+        width: 360px;
+        max-width: 94vw;
+    }
+
+    .modal h3 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 3px;
+    }
+
+    .modal .msub {
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 1.25rem;
+        font-family: var(--mono);
+    }
+
+    .modal label {
+        font-size: 11px;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 4px;
+        margin-top: 12px;
+    }
+
+    .modal input[type=date] {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 13px;
+        background: var(--bg);
+        color: var(--text);
+    }
+
+    .auto-btn {
+        margin-top: 8px;
+        font-size: 11px;
+        padding: 5px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        cursor: pointer;
+    }
+
+    .modal-btns {
+        display: flex;
+        gap: 8px;
+        margin-top: 1.25rem;
+    }
+
+    .modal-btns button {
+        flex: 1;
+        padding: 9px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .btn-cancel {
+        background: var(--bg);
+        color: var(--muted);
+    }
+
+    .btn-save {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+        font-weight: 500;
+    }
+
+    .btn-save:disabled {
+        opacity: .45;
+        cursor: not-allowed;
+    }
+
+    .saving {
+        font-size: 11px;
+        color: var(--muted);
+        text-align: center;
+        margin-top: 6px;
+        display: none;
+    }
+
+    .toast {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(60px);
+        background: var(--accent);
+        color: #fff;
+        font-size: 12px;
+        padding: 9px 20px;
+        border-radius: 20px;
+        opacity: 0;
+        transition: all .25s;
+        z-index: 999;
+        pointer-events: none;
+        white-space: nowrap;
+    }
+
+    .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 600px) {
+        .summary {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .parts-table th:nth-child(3), .parts-table td:nth-child(3), .parts-table th:nth-child(4), .parts-table td:nth-child(4) {
+            display: none;
+        }
+
+        .header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+    </style>
 </head>
 <body>
-<div class="page">
-  <div class="header">
-    <div class="header-left">
-      <h1>장비 교체 주기 관리</h1>
+    <div class="page">
+        <div class="header">
+            <div class="header-left">
+                <h1>장비 교체 주기 관리</h1>
+            </div>
+            <div class="header-right">
+                <div class="date-chip" id="date-chip"></div>
+                <button class="refresh-btn" onclick="loadData()">↻ 새로고침</button>
+            </div>
+        </div>
+        <div id="app"></div>
     </div>
-    <div class="header-right">
-      <div class="date-chip" id="date-chip"></div>
-      <button class="refresh-btn" onclick="loadData()">↻ 새로고침</button>
+
+    <div class="overlay" id="modal">
+        <div class="modal">
+            <h3 id="m-title"></h3>
+            <div class="msub" id="m-sub"></div>
+            <label>마지막 교체일자</label>
+            <input type="date" id="m-last">
+            <label>다음 교체일자</label>
+            <input type="date" id="m-next">
+            <button class="auto-btn" onclick="autoCalc()">교체주기로 자동계산</button>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeModal()">취소</button>
+                <button class="btn-save" id="m-save" onclick="saveModal()">저장</button>
+            </div>
+            <div class="saving" id="m-saving">저장 중...</div>
+        </div>
     </div>
-  </div>
-  <div id="app"></div>
-</div>
+    <div class="toast" id="toast"></div>
 
-<div class="overlay" id="modal">
-  <div class="modal">
-    <h3 id="m-title"></h3>
-    <div class="msub" id="m-sub"></div>
-    <label>마지막 교체일자</label>
-    <input type="date" id="m-last">
-    <label>다음 교체일자</label>
-    <input type="date" id="m-next">
-    <button class="auto-btn" onclick="autoCalc()">교체주기로 자동계산</button>
-    <div class="modal-btns">
-      <button class="btn-cancel" onclick="closeModal()">취소</button>
-      <button class="btn-save" id="m-save" onclick="saveModal()">저장</button>
-    </div>
-    <div class="saving" id="m-saving">저장 중...</div>
-  </div>
-</div>
+    <script>
+    // ── 설정 ──────────────────────────────────────────────────
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec';
+    const STORES = ['본점', '영도', '마린시티', '도모헌'];
+    const ADMIN_KEY = 'eq_admins_v1';
 
-<div class="toast" id="toast"></div>
+    let allData = null;
+    let activeStore = STORES[0];
+    let editTarget = null;
 
-<script>
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec';
-const STORES = ['본점','영도','마린시티','도모헌'];
-const ADMIN_KEY = 'eq_admins_v1';
+    // ── 날짜 유틸 ─────────────────────────────────────────────
+    // Apps Script에서 YYYY-MM-DD 문자열로 받으므로 단순 파싱
+    function parseISO(val) {
+        if (!val || String(val).trim() === '')
+            return null;
+        const s = String(val).trim();
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m)
+            return null;
+        return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+    }
 
-let allData = null;
-let activeStore = STORES[0];
-let editTarget = null;
+    function fmt(iso) {
+        const d = parseISO(iso);
+        if (!d)
+            return '';
+        return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}`;
+    }
 
-// ── 날짜 유틸 ─────────────────────────────────────────────
-function parseDate(val) {
-  if (!val) return null;
-  // 이미 YYYY-MM-DD 문자열
-  const s = String(val).trim();
-  const m = s.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
-  if (m) return new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
-  // Date 객체나 직렬화된 날짜
-  const d = new Date(val);
-  if (!isNaN(d)) return d;
-  return null;
-}
+    function todayISO() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
 
-function toISO(val) {
-  const d = parseDate(val);
-  if (!d) return '';
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const day = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
+    function diffDays(isoA, isoB) {
+        const a = parseISO(isoA),
+            b = parseISO(isoB);
+        if (!a || !b)
+            return null;
+        return Math.round((b - a) / 86400000);
+    }
 
-function fmt(val) {
-  const d = parseDate(val);
-  if (!d || isNaN(d)) return '';
-  return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}`;
-}
+    function addDays(iso, n) {
+        const d = parseISO(iso);
+        if (!d)
+            return '';
+        d.setDate(d.getDate() + n);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
 
-const today = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-};
+    // ── D-day 상태 ────────────────────────────────────────────
+    function status(nextISO) {
+        if (!nextISO || nextISO.trim() === '')
+            return {
+                label: '미입력',
+                cls: 'none'
+            };
+        const d = diffDays(todayISO(), nextISO);
+        if (d === null)
+            return {
+                label: '미입력',
+                cls: 'none'
+            };
+        if (d < 0)
+            return {
+                label: `D+${Math.abs(d)}`,
+                cls: 'overdue'
+            };
+        if (d <= 7)
+            return {
+                label: `D-${d}`,
+                cls: 'danger'
+            };
+        if (d <= 30)
+            return {
+                label: `D-${d}`,
+                cls: 'warning'
+            };
+        return {
+            label: `D-${d}`,
+            cls: 'ok'
+        };
+    }
 
-function diffDays(isoA, isoB) {
-  const a = parseDate(isoA), b = parseDate(isoB);
-  if (!a || !b) return null;
-  return Math.round((b - a) / 86400000);
-}
+    // ── 관리자 정보 (로컬 저장) ───────────────────────────────
+    function loadAdmins() {
+        try {
+            return JSON.parse(localStorage.getItem(ADMIN_KEY)) || {};
+        } catch (e) {
+            return {};
+        }
+    }
+    function saveAdmins(d) {
+        try {
+            localStorage.setItem(ADMIN_KEY, JSON.stringify(d));
+        } catch (e) {}
+    }
 
-function addDays(iso, n) {
-  const d = parseDate(iso);
-  if (!d) return '';
-  d.setDate(d.getDate() + n);
-  return toISO(d);
-}
+    // ── 데이터 로딩 ───────────────────────────────────────────
+    async function loadData() {
+        showLoading();
+        try {
+            const res = await fetch(`${APPS_SCRIPT_URL}?action=getData`);
+            const json = await res.json();
+            if (!json.success)
+                throw new Error(json.error);
+            allData = json.data;
+            render();
+        } catch (e) {
+            showError(e.message);
+        }
+    }
 
-// ── 상태 계산 ─────────────────────────────────────────────
-function status(nextVal) {
-  if (!nextVal || String(nextVal).trim() === '') return {label:'미입력', cls:'none'};
-  const d = diffDays(today(), nextVal);
-  if (d === null) return {label:'미입력', cls:'none'};
-  if (d < 0)   return {label:`D+${Math.abs(d)}`, cls:'overdue'};
-  if (d <= 7)  return {label:`D-${d}`,            cls:'danger'};
-  if (d <= 30) return {label:`D-${d}`,            cls:'warning'};
-  return             {label:`D-${d}`,              cls:'ok'};
-}
+    // ── 전체 렌더 ─────────────────────────────────────────────
+    function render() {
+        document.getElementById('date-chip').textContent = `기준 ${fmt(todayISO())}`;
 
-// ── 관리자 데이터 ─────────────────────────────────────────
-function loadAdmins() {
-  try { return JSON.parse(localStorage.getItem(ADMIN_KEY)) || {}; } catch(e) { return {}; }
-}
-function saveAdmins(d) {
-  try { localStorage.setItem(ADMIN_KEY, JSON.stringify(d)); } catch(e) {}
-}
+        let danger = 0,
+            warn = 0,
+            ok = 0,
+            none = 0;
+        STORES.forEach(s => {
+            Object.values(allData[s] || {}).forEach(cat =>
+            Object.values(cat).forEach(dev =>
+            dev.forEach(p => {
+                const st = status(p.next);
+                if (st.cls === 'danger' || st.cls === 'overdue')
+                    danger++;
+                else if (st.cls === 'warning')
+                    warn++;
+                else if (st.cls === 'ok')
+                    ok++;
+                else
+                    none++;
+            })
+            )
+            );
+        });
 
-// ── 데이터 로딩 ───────────────────────────────────────────
-async function loadData() {
-  showLoading();
-  try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getData`);
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-    allData = json.data;
-    render();
-  } catch(e) { showError(e.message); }
-}
-
-// ── 렌더 ──────────────────────────────────────────────────
-function render() {
-  document.getElementById('date-chip').textContent = `기준 ${fmt(today())}`;
-  let danger=0, warn=0, ok=0, none=0;
-  STORES.forEach(s => {
-    const sd = allData[s] || {};
-    Object.values(sd).forEach(cat => Object.values(cat).forEach(dev =>
-      dev.forEach(p => {
-        const st = status(p.next);
-        if (st.cls==='danger'||st.cls==='overdue') danger++;
-        else if (st.cls==='warning') warn++;
-        else if (st.cls==='ok') ok++;
-        else none++;
-      })
-    ));
-  });
-
-  const allTabs = [...STORES, '관리자'];
-  document.getElementById('app').innerHTML = `
+        document.getElementById('app').innerHTML = `
     <div class="summary">
-      <div class="s-card c-danger"><div class="s-label">위험 (D-7 이내)</div><div class="s-num">${danger}</div></div>
+      <div class="s-card c-danger"><div class="s-label">위험 (D-7 이내)</div><div class="s-num">${
+        danger}</div></div>
       <div class="s-card c-warn"><div class="s-label">주의 (D-30 이내)</div><div class="s-num">${warn}</div></div>
       <div class="s-card c-ok"><div class="s-label">정상</div><div class="s-num">${ok}</div></div>
       <div class="s-card"><div class="s-label">날짜 미입력</div><div class="s-num" style="color:var(--muted)">${none}</div></div>
     </div>
     <div class="tabs">
-      ${STORES.map(s=>`<button class="tab ${s===activeStore?'active':''}" onclick="selectStore('${s}')">${s}</button>`).join('')}
-      <button class="tab admin-tab ${'관리자'===activeStore?'active':''}" onclick="selectStore('관리자')">관리자</button>
+      ${
+
+        STORES.map(s => `<button class="tab ${s === activeStore ? 'active' : ''}" onclick="selectStore('${s}')">${s}</button>`).join('')}
+      <button class="tab admin-tab ${'관리자' === activeStore ? 'active' : ''}" onclick="selectStore('관리자')">관리자</button>
     </div>
     <div id="store-content"></div>
-  `;
-  renderStore();
-}
+  `
 
-function renderStore() {
-  const el = document.getElementById('store-content');
-  if (activeStore === '관리자') { el.innerHTML = renderAdmin(); bindAdminEvents(); return; }
-  const sd = allData[activeStore] || {};
-  if (!Object.keys(sd).length) { el.innerHTML='<div class="state-box"><p>데이터가 없습니다.</p></div>'; return; }
-  el.innerHTML = Object.entries(sd).map(([cat, devices]) => `
+
+        ;
+        renderStore();
+    }
+
+    // ── 매장 탭 렌더 ──────────────────────────────────────────
+    function renderStore() {
+        const el = document.getElementById('store-content');
+        if (activeStore === '관리자') {
+            el.innerHTML = renderAdmin();
+            return;
+        }
+
+        const sd = allData[activeStore] || {};
+        if (!Object.keys(sd).length) {
+            el.innerHTML = '<div class="state-box"><p>데이터가 없습니다.</p></div>';
+            return;
+        }
+        el.innerHTML = Object.entries(sd).map(([cat, devices]) => `
     <div class="cat-block">
-      <div class="cat-title">${cat}</div>
+      <div class="cat-title">${
+        cat}</div>
       ${Object.entries(devices).map(([dev, parts]) => renderDevice(dev, parts)).join('')}
     </div>
-  `).join('');
-}
+  `
 
-function renderDevice(dev, parts) {
-  const badges = parts.map(p => {
-    const st = status(p.next);
-    return `<span class="mini-badge ${st.cls}">${p.part} ${st.label}</span>`;
-  }).join('');
-  const rows = parts.map(p => {
-    const st = status(p.next);
-    const lastISO = toISO(p.last);
-    const nextISO = toISO(p.next);
-    return `<tr>
+        ).join('');
+    }
+
+    function renderDevice(dev, parts) {
+        const badges = parts.map(p => {
+            const st = status(p.next);
+            return `<span class="mini-badge ${st.cls}">${p.part} ${st.label}</span>`;
+        }).join('');
+
+        const rows = parts.map(p => {
+            const st = status(p.next);
+            return `<tr>
       <td><span class="part-name">${p.part}</span></td>
       <td><span class="part-interval">${p.interval}개월</span></td>
-      <td>${lastISO ? `<span class="date-val">${fmt(lastISO)}</span>` : '<span class="date-empty">미입력</span>'}</td>
-      <td>${nextISO ? `<span class="date-val">${fmt(nextISO)}</span>` : '<span class="date-empty">미입력</span>'}</td>
+      <td>${p.last ? `<span class="date-val">${fmt(p.last)}</span>` : '<span class="date-empty">미입력</span>'}</td>
+      <td>${p.next ? `<span class="date-val">${fmt(p.next)}</span>` : '<span class="date-empty">미입력</span>'}</td>
       <td><span class="dday ${st.cls}">${st.label}</span></td>
-      <td>${p.note?`<span class="note-text">${p.note}</span>`:''}</td>
-      <td><button class="edit-btn" onclick="openModal('${activeStore}','${esc(dev)}','${esc(p.part)}',${p.interval},'${lastISO}','${nextISO}')">수정</button></td>
-    </tr>`;
-  }).join('');
-  return `
+      <td>${p.note ? `<span class="note-text">${p.note}</span>` : ''}</td>
+      <td><button class="edit-btn" onclick="openModal('${activeStore}','${esc(dev)}','${esc(p.part)}',${p.interval},'${p.last || ''}','${p.next || ''}')">수정</button></td>
+    </tr>`
+            ;
+        }).join('');
+
+        return `
     <div class="device-block">
       <div class="device-header">
-        <span class="device-name">${dev}</span>
+        <span class="device-name">${
+
+        dev}</span>
         <div class="device-status">${badges}</div>
       </div>
       <table class="parts-table">
         <thead><tr>
           <th>부품명</th><th>주기</th><th>마지막 교체일자</th><th>다음 교체일자</th><th>D-day</th><th>비고</th><th></th>
         </tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody>${
+
+
+
+
+        rows}</tbody>
       </table>
-    </div>`;
-}
+    </div>`
 
-// ── 관리자 탭 ─────────────────────────────────────────────
-function renderAdmin() {
-  const admins = loadAdmins();
+        ;
+    }
 
-  // D-30 이내 알림 대상 수집
-  const alerts = [];
-  STORES.forEach(store => {
-    const sd = allData?.[store] || {};
-    Object.values(sd).forEach(cat => Object.values(cat).forEach(dev =>
-      dev.forEach(p => {
-        const d = diffDays(today(), p.next);
-        if (d !== null && d >= 0 && d <= 30) {
-          alerts.push({store, part: p.part, next: toISO(p.next), dday: d});
-        }
-      })
-    ));
-  });
+    // ── 관리자 탭 렌더 ────────────────────────────────────────
+    function renderAdmin() {
+        const admins = loadAdmins();
+        const today = todayISO();
 
-  const cards = STORES.map(s => {
-    const a = admins[s] || {};
-    return `
+        // D-30 이내 교체 대상 수집
+        const alerts = [];
+        STORES.forEach(store => {
+            Object.values(allData[store] || {}).forEach(cat =>
+            Object.values(cat).forEach(dev =>
+            dev.forEach(p => {
+                const d = diffDays(today, p.next);
+                if (d !== null && d >= 0 && d <= 30)
+                    alerts.push({
+                        store,
+                        part: p.part,
+                        next: p.next,
+                        dday: d
+                    });
+            })
+            )
+            );
+        });
+
+        const cards = STORES.map(s => {
+            const a = admins[s] || {};
+            return `
       <div class="admin-card" data-store="${s}">
         <div class="store-badge">${s}</div>
         <div class="admin-field">
           <label>담당자 이름</label>
-          <input type="text" class="a-name" placeholder="이름 입력" value="${a.name||''}">
+          <input type="text" class="a-name" placeholder="이름 입력" value="${
+
+            a.name || ''}">
         </div>
         <div class="admin-field">
           <label>연락처</label>
-          <input type="text" class="a-phone" placeholder="010-0000-0000" value="${a.phone||''}">
+          <input type="text" class="a-phone" placeholder="010-0000-0000" value="${
+
+
+            a.phone || ''}">
         </div>
         <div class="admin-field">
           <label>이메일</label>
-          <input type="email" class="a-email" placeholder="email@example.com" value="${a.email||''}">
-        </div>
-        <button class="admin-save-btn" onclick="saveAdmin('${s}')">저장</button>
-      </div>`;
-  }).join('');
+          <input type="email" class="a-email" placeholder="email@example.com" value="${
 
-  const alertItems = alerts.length === 0
-    ? '<p style="font-size:12px;color:var(--muted);padding:1rem 0;">D-30 이내 교체 대상 없음</p>'
-    : alerts.map(a => `
+
+            a.email || ''}">
+        </div>
+        <button class="admin-save-btn" onclick="saveAdmin('${
+            s}')">저장</button>
+      </div>`
+            ;
+        }).join('');
+
+        const alertItems = alerts.length === 0
+        ? '<p style="font-size:12px;color:var(--muted);padding:1rem 0;">D-30 이내 교체 대상 없음</p>'
+        : alerts.map(a => `
         <div class="alert-item">
-          <span class="alert-store">${a.store}</span>
+          <span class="alert-store">${
+        a.store}</span>
           <span style="font-weight:500;flex:1;min-width:120px;">${a.part}</span>
           <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${fmt(a.next)}</span>
-          <span class="dday warning" style="font-size:10px;">D-${a.dday}</span>
-        </div>`).join('');
+          <span class="dday warning">D-${a.dday}</span>
+        </div>`
+        ).join('');
 
-  return `
+        return `
     <div class="admin-grid">${cards}</div>
     <div class="alert-section">
       <h3>교체 알림 발송</h3>
-      <p>D-30 이내 교체 대상 부품을 매장 담당자 이메일로 발송합니다.</p>
-      <div class="alert-list">${alertItems}</div>
-      ${alerts.length > 0 ? `<button class="alert-btn" id="send-btn" onclick="sendAlerts()" style="margin-top:1rem;">메일 발송 (${alerts.length}건)</button>` : ''}
-    </div>`;
-}
+      <p class="alert-desc">D-30 이내 교체 대상 부품을 매장 담당자 이메일로 발송합니다.</p>
+      <div class="alert-list">${
 
-function bindAdminEvents() {}
 
-function saveAdmin(store) {
-  const card = document.querySelector(`.admin-card[data-store="${store}"]`);
-  const admins = loadAdmins();
-  admins[store] = {
-    name:  card.querySelector('.a-name').value.trim(),
-    phone: card.querySelector('.a-phone').value.trim(),
-    email: card.querySelector('.a-email').value.trim(),
-  };
-  saveAdmins(admins);
-  showToast(`${store} 담당자 정보 저장 완료`);
-}
+        alertItems}</div>
+      ${alerts.length > 0 ? `<button class="alert-btn" id="send-btn" onclick="sendAlerts()">메일 발송 (${alerts.length}건)</button>` : ''}
+    </div>`
+        ;
+    }
 
-async function sendAlerts() {
-  const admins = loadAdmins();
-  const btn = document.getElementById('send-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '발송 중...'; }
+    function saveAdmin(store) {
+        const card = document.querySelector(`.admin-card[data-store="${store}"]`);
+        const admins = loadAdmins();
+        admins[store] = {
+            name: card.querySelector('.a-name').value.trim(),
+            phone: card.querySelector('.a-phone').value.trim(),
+            email: card.querySelector('.a-email').value.trim(),
+        };
+        saveAdmins(admins);
+        showToast(`${store} 담당자 정보 저장 완료`);
+    }
 
-  // 매장별로 알림 대상 묶기
-  const byStore = {};
-  STORES.forEach(store => {
-    const sd = allData?.[store] || {};
-    Object.values(sd).forEach(cat => Object.values(cat).forEach(dev =>
-      dev.forEach(p => {
-        const d = diffDays(today(), p.next);
-        if (d !== null && d >= 0 && d <= 30) {
-          if (!byStore[store]) byStore[store] = [];
-          byStore[store].push({part: p.part, next: toISO(p.next), dday: d});
+    async function sendAlerts() {
+        const admins = loadAdmins();
+        const btn = document.getElementById('send-btn');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '발송 중...';
         }
-      })
-    ));
-  });
 
-  let sent = 0, failed = 0;
-  for (const [store, parts] of Object.entries(byStore)) {
-    const admin = admins[store];
-    if (!admin?.email) { failed++; continue; }
+        const byStore = {};
+        STORES.forEach(store => {
+            Object.values(allData[store] || {}).forEach(cat =>
+            Object.values(cat).forEach(dev =>
+            dev.forEach(p => {
+                const d = diffDays(todayISO(), p.next);
+                if (d !== null && d >= 0 && d <= 30) {
+                    if (!byStore[store])
+                        byStore[store] = [];
+                    byStore[store].push({
+                        part: p.part,
+                        next: p.next,
+                        dday: d
+                    });
+                }
+            })
+            )
+            );
+        });
 
-    const partLines = parts.map(p =>
-      `교체해야 할 부품명 : ${p.part}\n만료 예정일 : ${fmt(p.next)}\n남은 기간 : D-${p.dday}\n`
-    ).join('\n');
+        let sent = 0,
+            failed = 0;
+        for (const [store, parts] of Object.entries(byStore)) {
+            const admin = admins[store];
+            if (!admin?.email) {
+                failed++;
+                continue;
+            }
 
-    const body = JSON.stringify({
-      action: 'sendMail',
-      to: admin.email,
-      subject: '[확인 요청] 장비 부품 교체 주기 경과 예정 안내',
-      body: `안녕하세요, 매장에서 사용 중인 장비의 부품 교체 시기가 도래하여 확인 요청드립니다.\n\n${partLines}\n감사합니다.`
+            const partLines = parts.map(p =>
+            `교체해야 할 부품명 : ${p.part}\n만료 예정일 : ${fmt(p.next)}\n남은 기간 : D-${p.dday}`
+            ).join('\n\n');
+
+            try {
+                const res = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'sendMail',
+                        to: admin.email,
+                        subject: '[확인 요청] 장비 부품 교체 주기 경과 예정 안내',
+                        body: `안녕하세요, 매장에서 사용 중인 장비의 부품 교체 시기가 도래하여 확인 요청드립니다.\n\n${partLines}\n\n감사합니다.`
+                    })
+                });
+                const json = await res.json();
+                if (json.success)
+                    sent++;
+                else
+                    failed++;
+            } catch (e) {
+                failed++;
+            }
+        }
+
+        showToast(`발송 완료 ${sent}건${failed > 0 ? ' / 실패 ' + failed + '건' : ''}`);
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = `메일 발송`;
+        }
+    }
+
+    // ── 탭 전환 ───────────────────────────────────────────────
+    function selectStore(s) {
+        activeStore = s;
+        document.querySelectorAll('.tab').forEach(t =>
+        t.classList.toggle('active', t.textContent.trim() === s)
+        );
+        renderStore();
+    }
+
+    // ── 모달 ──────────────────────────────────────────────────
+    function openModal(store, dev, part, interval, last, next) {
+        editTarget = {
+            store,
+            dev,
+            part,
+            interval
+        };
+        document.getElementById('m-title').textContent = part;
+        document.getElementById('m-sub').textContent = `${store} · ${dev} · ${interval}개월 주기`;
+        document.getElementById('m-last').value = last || '';
+        document.getElementById('m-next').value = next || '';
+        document.getElementById('m-save').disabled = false;
+        document.getElementById('m-saving').style.display = 'none';
+        document.getElementById('modal').classList.add('open');
+    }
+    function closeModal() {
+        document.getElementById('modal').classList.remove('open');
+        editTarget = null;
+    }
+    function autoCalc() {
+        const last = document.getElementById('m-last').value;
+        if (!last || !editTarget)
+            return;
+        document.getElementById('m-next').value = addDays(last, editTarget.interval * 30);
+    }
+    async function saveModal() {
+        if (!editTarget)
+            return;
+        const last = document.getElementById('m-last').value;
+        const next = document.getElementById('m-next').value;
+        document.getElementById('m-save').disabled = true;
+        document.getElementById('m-saving').style.display = 'block';
+        try {
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'updateRow',
+                    store: editTarget.store,
+                    device: editTarget.dev,
+                    part: editTarget.part,
+                    last,
+                    next
+                })
+            });
+            const json = await res.json();
+            if (!json.success)
+                throw new Error(json.error);
+            // 로컬 데이터 업데이트
+            Object.values(allData[editTarget.store] || {}).forEach(cat => {
+                if (cat[editTarget.dev])
+                    cat[editTarget.dev].forEach(p => {
+                        if (p.part === editTarget.part) {
+                            p.last = last;
+                            p.next = next;
+                        }
+                    });
+            });
+            closeModal();
+            renderStore();
+            showToast('저장 완료 ✓');
+        } catch (e) {
+            document.getElementById('m-save').disabled = false;
+            document.getElementById('m-saving').style.display = 'none';
+            showToast('저장 실패: ' + e.message);
+        }
+    }
+
+    // ── 유틸 ──────────────────────────────────────────────────
+    const esc = s => String(s).replace(/'/g, "\\'");
+    function showLoading() {
+        document.getElementById('app').innerHTML =
+        '<div class="state-box"><div class="spinner"></div><p>불러오는 중...</p></div>';
+    }
+    function showError(m) {
+        document.getElementById('app').innerHTML =
+        `<div class="state-box"><p>로딩 실패<br><small>${m}</small></p></div>`;
+    }
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    // ── 초기화 ────────────────────────────────────────────────
+    document.getElementById('modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget)
+            closeModal();
     });
-
-    try {
-      const res = await fetch(APPS_SCRIPT_URL, {method:'POST', body});
-      const json = await res.json();
-      if (json.success) sent++; else failed++;
-    } catch(e) { failed++; }
-  }
-
-  showToast(`발송 완료 ${sent}건${failed>0?' / 실패 '+failed+'건':''}`);
-  if (btn) { btn.disabled = false; btn.textContent = `메일 발송`; }
-}
-
-// ── 탭 전환 ───────────────────────────────────────────────
-function selectStore(s) {
-  activeStore = s;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent === s));
-  renderStore();
-}
-
-// ── 모달 ──────────────────────────────────────────────────
-function openModal(store, dev, part, interval, last, next) {
-  editTarget = {store, dev, part, interval};
-  document.getElementById('m-title').textContent = part;
-  document.getElementById('m-sub').textContent = `${store} · ${dev} · ${interval}개월 주기`;
-  document.getElementById('m-last').value = last || '';
-  document.getElementById('m-next').value = next || '';
-  document.getElementById('m-save').disabled = false;
-  document.getElementById('m-saving').style.display = 'none';
-  document.getElementById('modal').classList.add('open');
-}
-function closeModal() { document.getElementById('modal').classList.remove('open'); editTarget=null; }
-function autoCalc() {
-  const last = document.getElementById('m-last').value;
-  if (!last || !editTarget) return;
-  document.getElementById('m-next').value = addDays(last, editTarget.interval * 30);
-}
-async function saveModal() {
-  if (!editTarget) return;
-  const last = document.getElementById('m-last').value;
-  const next = document.getElementById('m-next').value;
-  document.getElementById('m-save').disabled = true;
-  document.getElementById('m-saving').style.display = 'block';
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method:'POST',
-      body: JSON.stringify({action:'updateRow', store:editTarget.store, device:editTarget.dev, part:editTarget.part, last, next})
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error);
-    const sd = allData[editTarget.store];
-    Object.values(sd).forEach(cat => {
-      if (cat[editTarget.dev]) cat[editTarget.dev].forEach(p => {
-        if (p.part === editTarget.part) { p.last=last; p.next=next; }
-      });
-    });
-    closeModal(); renderStore(); showToast('저장 완료 ✓');
-  } catch(e) {
-    document.getElementById('m-save').disabled=false;
-    document.getElementById('m-saving').style.display='none';
-    showToast('저장 실패: '+e.message);
-  }
-}
-
-// ── 유틸 ──────────────────────────────────────────────────
-const esc = s => String(s).replace(/'/g,"\\'");
-function showLoading() { document.getElementById('app').innerHTML='<div class="state-box"><div class="spinner"></div><p>불러오는 중...</p></div>'; }
-function showError(m) { document.getElementById('app').innerHTML=`<div class="state-box"><p>로딩 실패<br><small>${m}</small></p></div>`; }
-function showToast(msg) {
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2800);
-}
-
-document.getElementById('modal').addEventListener('click', e => { if(e.target===e.currentTarget) closeModal(); });
-loadData();
-</script>
+    loadData();
+    </script>
 </body>
 </html>
