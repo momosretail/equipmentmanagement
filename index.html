@@ -20,18 +20,12 @@
         --border2: #d0cdc5;
         --text: #1a1916;
         --muted: #7a7770;
-        --ok-bg: #e8f2de;
-        --ok: #3a6b10;
-        --warn-bg: #fdf0d8;
-        --warn: #8a5200;
-        --danger-bg: #fce9e9;
-        --danger: #9e2a2a;
-        --none-bg: #efefed;
-        --none: #7a7770;
         --accent: #1a1916;
+        --blue: #2d5a8e;
+        --blue-bg: #e8f0fb;
         --r: 8px;
-        --mono: 'DM Mono', monospace;
         --sans: 'Noto Sans KR', sans-serif;
+        --mono: 'DM Mono', monospace;
     }
 
     body {
@@ -57,7 +51,7 @@
     }
 
     .header-left h1 {
-        font-size: 20px;
+        font-size: 22px;
         font-weight: 600;
         letter-spacing: -0.02em;
     }
@@ -71,7 +65,6 @@
 
     .date-chip {
         font-size: 11px;
-        font-family: var(--mono);
         color: var(--muted);
         background: var(--surface);
         border: 1px solid var(--border);
@@ -87,8 +80,7 @@
         border-radius: 20px;
         padding: 6px 14px;
         cursor: pointer;
-    }
-
+    }/* Summary */
     .summary {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
@@ -101,6 +93,19 @@
         border: 1px solid var(--border);
         border-radius: var(--r);
         padding: .9rem 1rem;
+        cursor: pointer;
+        transition: all .15s;
+        user-select: none;
+    }
+
+    .s-card:hover {
+        border-color: var(--border2);
+        box-shadow: 0 1px 4px rgba(0, 0, 0, .06);
+    }
+
+    .s-card.active-filter {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent);
     }
 
     .s-label {
@@ -117,17 +122,75 @@
     }
 
     .s-card.c-danger .s-num {
-        color: var(--danger);
+        color: #C62828;
     }
 
     .s-card.c-warn .s-num {
-        color: var(--warn);
+        color: #EF6C00;
     }
 
     .s-card.c-ok .s-num {
-        color: var(--ok);
+        color: #2E7D32;
+    }/* Filter result */
+    .filter-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.25rem;
+        display: none;
     }
 
+    .filter-panel.open {
+        display: block;
+    }
+
+    .filter-panel-title {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: .75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .filter-close {
+        font-size: 12px;
+        color: var(--muted);
+        cursor: pointer;
+        background: none;
+        border: none;
+    }
+
+    .filter-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .filter-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        padding: 6px 8px;
+        background: var(--bg);
+        border-radius: 6px;
+    }
+
+    .filter-store-badge {
+        font-size: 10px;
+        color: var(--blue);
+        background: var(--blue-bg);
+        border-radius: 10px;
+        padding: 1px 8px;
+        white-space: nowrap;
+    }
+
+    .filter-device {
+        color: var(--muted);
+        font-size: 11px;
+    }/* Tabs */
     .tabs {
         display: flex;
         gap: 6px;
@@ -140,7 +203,7 @@
         border-radius: 20px;
         border: 1px solid var(--border);
         background: var(--surface);
-        font-size: 13px;
+        font-size: 15px;
         color: var(--muted);
         cursor: pointer;
         transition: all .15s;
@@ -153,19 +216,18 @@
     }
 
     .tab.admin-tab.active {
-        background: #2d5a8e;
-        border-color: #2d5a8e;
-    }
-
+        background: var(--blue);
+        border-color: var(--blue);
+    }/* Category */
     .cat-block {
         margin-bottom: 1.5rem;
     }
 
     .cat-title {
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 600;
         color: var(--muted);
-        letter-spacing: .08em;
+        letter-spacing: .06em;
         text-transform: uppercase;
         margin-bottom: 10px;
         display: flex;
@@ -178,8 +240,7 @@
         flex: 1;
         height: 1px;
         background: var(--border);
-    }
-
+    }/* Device */
     .device-block {
         margin-bottom: 1rem;
         background: var(--surface);
@@ -189,7 +250,7 @@
     }
 
     .device-header {
-        padding: .7rem 1rem;
+        padding: .75rem 1rem;
         background: var(--surface2);
         border-bottom: 1px solid var(--border);
         display: flex;
@@ -200,8 +261,8 @@
     }
 
     .device-name {
-        font-size: 13px;
-        font-weight: 600;
+        font-size: 16px;
+        font-weight: 700;
     }
 
     .device-status {
@@ -212,50 +273,28 @@
 
     .mini-badge {
         font-size: 10px;
-        font-family: var(--mono);
         padding: 2px 7px;
         border-radius: 10px;
         font-weight: 500;
-    }
-
-    .mini-badge.ok {
-        background: var(--ok-bg);
-        color: var(--ok);
-    }
-
-    .mini-badge.warning {
-        background: var(--warn-bg);
-        color: var(--warn);
-    }
-
-    .mini-badge.danger, .mini-badge.overdue {
-        background: var(--danger-bg);
-        color: var(--danger);
-    }
-
-    .mini-badge.none {
-        background: var(--none-bg);
-        color: var(--none);
-    }
-
+    }/* Table */
     .parts-table {
         width: 100%;
         border-collapse: collapse;
     }
 
     .parts-table th {
-        font-size: 10px;
+        font-size: 13px;
         color: var(--muted);
         font-weight: 500;
-        padding: 6px 1rem;
+        padding: 7px 1rem;
         text-align: left;
         border-bottom: 1px solid var(--border);
         background: var(--surface2);
     }
 
     .parts-table td {
-        font-size: 12px;
-        padding: 8px 1rem;
+        font-size: 13px;
+        padding: 9px 1rem;
         border-bottom: 1px solid var(--border);
         vertical-align: middle;
     }
@@ -273,53 +312,23 @@
     }
 
     .part-interval {
-        font-family: var(--mono);
         color: var(--muted);
-        font-size: 11px;
-    }
-
-    .date-val {
-        font-family: var(--mono);
-        font-size: 11px;
     }
 
     .date-empty {
-        color: var(--none);
+        color: var(--muted);
         font-style: italic;
-        font-size: 11px;
-    }
-
-    .dday {
+    }/* 교체까지 배지 */
+    .dday-badge {
         display: inline-flex;
         align-items: center;
-        font-family: var(--mono);
-        font-size: 11px;
-        font-weight: 600;
-        padding: 2px 8px;
-        border-radius: 10px;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
         white-space: nowrap;
-    }
-
-    .dday.ok {
-        background: var(--ok-bg);
-        color: var(--ok);
-    }
-
-    .dday.warning {
-        background: var(--warn-bg);
-        color: var(--warn);
-    }
-
-    .dday.danger, .dday.overdue {
-        background: var(--danger-bg);
-        color: var(--danger);
-    }
-
-    .dday.none {
-        background: var(--none-bg);
-        color: var(--none);
-    }
-
+    }/* 버튼 */
     .edit-btn {
         font-size: 11px;
         color: var(--muted);
@@ -328,6 +337,7 @@
         border-radius: 5px;
         padding: 3px 8px;
         cursor: pointer;
+        margin-right: 4px;
     }
 
     .edit-btn:hover {
@@ -335,12 +345,25 @@
         border-color: var(--border2);
     }
 
+    .hist-btn {
+        font-size: 11px;
+        color: var(--blue);
+        border: 1px solid var(--blue-bg);
+        border-radius: 5px;
+        padding: 3px 8px;
+        cursor: pointer;
+        background: var(--blue-bg);
+    }
+
+    .hist-btn:hover {
+        background: #d0e0f5;
+    }
+
     .note-text {
-        font-size: 10px;
+        font-size: 11px;
         color: var(--muted);
         font-style: italic;
     }/* 관리자 탭 */
-
     .admin-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -358,8 +381,8 @@
     .store-badge {
         font-size: 10px;
         font-weight: 600;
-        color: #2d5a8e;
-        background: #e8f0fb;
+        color: var(--blue);
+        background: var(--blue-bg);
         border-radius: 20px;
         padding: 2px 10px;
         display: inline-block;
@@ -417,7 +440,7 @@
         margin-bottom: 4px;
     }
 
-    .alert-section .alert-desc {
+    .alert-desc {
         font-size: 12px;
         color: var(--muted);
         margin-bottom: 1rem;
@@ -425,7 +448,7 @@
 
     .alert-btn {
         padding: 8px 20px;
-        background: #2d5a8e;
+        background: var(--blue);
         color: #fff;
         border: none;
         border-radius: 20px;
@@ -456,13 +479,12 @@
 
     .alert-store {
         font-size: 10px;
-        color: #2d5a8e;
-        background: #e8f0fb;
+        color: var(--blue);
+        background: var(--blue-bg);
         border-radius: 10px;
         padding: 1px 8px;
         white-space: nowrap;
     }/* States */
-
     .state-box {
         text-align: center;
         padding: 3rem 1rem;
@@ -484,7 +506,6 @@
             transform: rotate(360deg);
         }
     }/* Modal */
-
     .overlay {
         display: none;
         position: fixed;
@@ -504,8 +525,10 @@
         border-radius: 12px;
         border: 1px solid var(--border);
         padding: 1.5rem;
-        width: 360px;
+        width: 380px;
         max-width: 94vw;
+        max-height: 90vh;
+        overflow-y: auto;
     }
 
     .modal h3 {
@@ -518,7 +541,6 @@
         font-size: 11px;
         color: var(--muted);
         margin-bottom: 1.25rem;
-        font-family: var(--mono);
     }
 
     .modal label {
@@ -529,7 +551,7 @@
         margin-top: 12px;
     }
 
-    .modal input[type=date] {
+    .modal input[type=date], .modal input[type=text], .modal textarea {
         width: 100%;
         padding: 8px 10px;
         border: 1px solid var(--border);
@@ -537,6 +559,17 @@
         font-size: 13px;
         background: var(--bg);
         color: var(--text);
+        font-family: var(--sans);
+    }
+
+    .modal textarea {
+        resize: vertical;
+        min-height: 60px;
+    }
+
+    .modal input:focus, .modal textarea:focus {
+        outline: none;
+        border-color: var(--border2);
     }
 
     .auto-btn {
@@ -587,8 +620,41 @@
         text-align: center;
         margin-top: 6px;
         display: none;
+    }/* History modal */
+    .hist-item {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
     }
 
+    .hist-item:last-child {
+        border-bottom: none;
+    }
+
+    .hist-date {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .hist-manager {
+        font-size: 12px;
+        color: var(--blue);
+        margin-top: 2px;
+    }
+
+    .hist-memo {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 3px;
+        font-style: italic;
+    }
+
+    .hist-empty {
+        font-size: 12px;
+        color: var(--muted);
+        padding: 1rem 0;
+        text-align: center;
+    }/* Toast */
     .toast {
         position: fixed;
         bottom: 2rem;
@@ -641,6 +707,7 @@
         <div id="app"></div>
     </div>
 
+    <!-- 수정 모달 -->
     <div class="overlay" id="modal">
         <div class="modal">
             <h3 id="m-title"></h3>
@@ -650,6 +717,10 @@
             <label>다음 교체일자</label>
             <input type="date" id="m-next">
             <button class="auto-btn" onclick="autoCalc()">교체주기로 자동계산</button>
+            <label>담당자</label>
+            <input type="text" id="m-manager" placeholder="담당자 이름">
+            <label>메모</label>
+            <textarea id="m-memo" placeholder="특이사항, 교체 사유 등"></textarea>
             <div class="modal-btns">
                 <button class="btn-cancel" onclick="closeModal()">취소</button>
                 <button class="btn-save" id="m-save" onclick="saveModal()">저장</button>
@@ -657,50 +728,60 @@
             <div class="saving" id="m-saving">저장 중...</div>
         </div>
     </div>
+
+    <!-- 이력 모달 -->
+    <div class="overlay" id="hist-modal">
+        <div class="modal">
+            <h3 id="h-title"></h3>
+            <div class="msub" id="h-sub"></div>
+            <div id="h-loading" class="state-box" style="padding:1.5rem 0;">
+                <div class="spinner"></div>
+            </div>
+            <div id="h-list" style="display:none;"></div>
+            <div class="modal-btns" style="margin-top:1rem;">
+                <button class="btn-cancel" onclick="closeHistModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
     <script>
-    // ── 설정 ──────────────────────────────────────────────────
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec';
     const STORES = ['본점', '영도', '마린시티', '도모헌'];
     const ADMIN_KEY = 'eq_admins_v1';
 
     let allData = null;
     let activeStore = STORES[0];
+    let activeFilter = null; // 'danger' | 'warning' | 'ok' | 'none' | null
     let editTarget = null;
 
     // ── 날짜 유틸 ─────────────────────────────────────────────
-    // Apps Script에서 YYYY-MM-DD 문자열로 받으므로 단순 파싱
     function parseISO(val) {
-        if (!val || String(val).trim() === '')
+        if (!val || !String(val).trim())
             return null;
-        const s = String(val).trim();
-        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        const m = String(val).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (!m)
             return null;
-        return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+        return new Date(+m[1], +m[2] - 1, +m[3]);
     }
-
     function fmt(iso) {
         const d = parseISO(iso);
         if (!d)
             return '';
         return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}`;
     }
-
     function todayISO() {
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
-
-    function diffDays(isoA, isoB) {
-        const a = parseISO(isoA),
-            b = parseISO(isoB);
-        if (!a || !b)
+    function diffDays(a, b) {
+        const da = parseISO(a),
+            db = parseISO(b);
+        if (!da || !db)
             return null;
-        return Math.round((b - a) / 86400000);
+        return Math.round((db - da) / 86400000);
     }
-
     function addDays(iso, n) {
         const d = parseISO(iso);
         if (!d)
@@ -709,41 +790,108 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
-    // ── D-day 상태 ────────────────────────────────────────────
+    // ── 상태 계산 ─────────────────────────────────────────────
     function status(nextISO) {
-        if (!nextISO || nextISO.trim() === '')
+        if (!nextISO || !nextISO.trim())
             return {
-                label: '미입력',
-                cls: 'none'
+                cls: 'none',
+                days: null
             };
         const d = diffDays(todayISO(), nextISO);
         if (d === null)
             return {
-                label: '미입력',
-                cls: 'none'
+                cls: 'none',
+                days: null
             };
         if (d < 0)
             return {
-                label: `D+${Math.abs(d)}`,
-                cls: 'overdue'
+                cls: 'overdue',
+                days: Math.abs(d)
             };
         if (d <= 7)
             return {
-                label: `D-${d}`,
-                cls: 'danger'
+                cls: 'danger',
+                days: d
             };
         if (d <= 30)
             return {
-                label: `D-${d}`,
-                cls: 'warning'
+                cls: 'warning',
+                days: d
             };
         return {
-            label: `D-${d}`,
-            cls: 'ok'
+            cls: 'ok',
+            days: d
         };
     }
 
-    // ── 관리자 정보 (로컬 저장) ───────────────────────────────
+    // 배지 HTML 생성
+    function ddayBadge(st) {
+        const cfg = {
+            ok: {
+                bg: '#E8F5E9',
+                fg: '#2E7D32',
+                icon: '🟢',
+                label: '여유'
+            },
+            warning: {
+                bg: '#FFF3E0',
+                fg: '#EF6C00',
+                icon: '🟠',
+                label: '교체 예정'
+            },
+            danger: {
+                bg: '#FDECEA',
+                fg: '#C62828',
+                icon: '🔴',
+                label: '즉시 교체'
+            },
+            overdue: {
+                bg: '#F5F5F5',
+                fg: '#616161',
+                icon: '⚫',
+                label: '지남'
+            },
+            none: {
+                bg: '#FFF8E1',
+                fg: '#F57F17',
+                icon: '🟡',
+                label: '미입력'
+            },
+        };
+        const c = cfg[st.cls] || cfg.none;
+        const dayStr = st.days !== null ? ` (${st.days}일)` : '';
+        return `<span class="dday-badge" style="background:${c.bg};color:${c.fg};">${c.icon} ${c.label}${dayStr}</span>`;
+    }
+
+    // 미니 배지 (장비 헤더용)
+    function miniBadge(st, label) {
+        const cfg = {
+            ok: {
+                bg: '#E8F5E9',
+                fg: '#2E7D32'
+            },
+            warning: {
+                bg: '#FFF3E0',
+                fg: '#EF6C00'
+            },
+            danger: {
+                bg: '#FDECEA',
+                fg: '#C62828'
+            },
+            overdue: {
+                bg: '#F5F5F5',
+                fg: '#616161'
+            },
+            none: {
+                bg: '#FFF8E1',
+                fg: '#F57F17'
+            },
+        };
+        const c = cfg[st.cls] || cfg.none;
+        return `<span class="mini-badge" style="background:${c.bg};color:${c.fg};">${label}</span>`;
+    }
+
+    // ── 관리자 정보 ───────────────────────────────────────────
     function loadAdmins() {
         try {
             return JSON.parse(localStorage.getItem(ADMIN_KEY)) || {};
@@ -766,6 +914,7 @@
             if (!json.success)
                 throw new Error(json.error);
             allData = json.data;
+            activeFilter = null;
             render();
         } catch (e) {
             showError(e.message);
@@ -776,23 +925,34 @@
     function render() {
         document.getElementById('date-chip').textContent = `기준 ${fmt(todayISO())}`;
 
-        let danger = 0,
-            warn = 0,
-            ok = 0,
-            none = 0;
-        STORES.forEach(s => {
-            Object.values(allData[s] || {}).forEach(cat =>
-            Object.values(cat).forEach(dev =>
-            dev.forEach(p => {
+        // 카운트 + 필터용 목록 수집
+        const counts = {
+            danger: 0,
+            warning: 0,
+            ok: 0,
+            none: 0
+        };
+        const items = {
+            danger: [],
+            warning: [],
+            ok: [],
+            none: []
+        };
+
+        STORES.forEach(store => {
+            Object.values(allData[store] || {}).forEach(cat =>
+            Object.entries(cat).forEach(([dev, parts]) =>
+            parts.forEach(p => {
                 const st = status(p.next);
-                if (st.cls === 'danger' || st.cls === 'overdue')
-                    danger++;
-                else if (st.cls === 'warning')
-                    warn++;
-                else if (st.cls === 'ok')
-                    ok++;
-                else
-                    none++;
+                const cls = st.cls === 'overdue' ? 'danger' : st.cls;
+                counts[cls]++;
+                items[cls].push({
+                    store,
+                    dev,
+                    part: p.part,
+                    next: p.next,
+                    st
+                });
             })
             )
             );
@@ -800,14 +960,39 @@
 
         document.getElementById('app').innerHTML = `
     <div class="summary">
-      <div class="s-card c-danger"><div class="s-label">위험 (D-7 이내)</div><div class="s-num">${
-        danger}</div></div>
-      <div class="s-card c-warn"><div class="s-label">주의 (D-30 이내)</div><div class="s-num">${warn}</div></div>
-      <div class="s-card c-ok"><div class="s-label">정상</div><div class="s-num">${ok}</div></div>
-      <div class="s-card"><div class="s-label">날짜 미입력</div><div class="s-num" style="color:var(--muted)">${none}</div></div>
+      <div class="s-card c-danger ${
+        activeFilter === 'danger' ? 'active-filter' : ''}" onclick="toggleFilter('danger')">
+        <div class="s-label">🔴 위험 (D-7 이내)</div><div class="s-num">${counts.danger}</div>
+      </div>
+      <div class="s-card c-warn ${
+        activeFilter === 'warning' ? 'active-filter' : ''}" onclick="toggleFilter('warning')">
+        <div class="s-label">🟠 주의 (D-30 이내)</div><div class="s-num">${counts.warning}</div>
+      </div>
+      <div class="s-card c-ok ${
+        activeFilter === 'ok' ? 'active-filter' : ''}" onclick="toggleFilter('ok')">
+        <div class="s-label">🟢 정상</div><div class="s-num">${counts.ok}</div>
+      </div>
+      <div class="s-card ${
+        activeFilter === 'none' ? 'active-filter' : ''}" onclick="toggleFilter('none')">
+        <div class="s-label">🟡 날짜 미입력</div><div class="s-num" style="color:var(--muted)">${counts.none}</div>
+      </div>
+    </div>
+    <div class="filter-panel ${
+
+        activeFilter ? 'open' : ''}" id="filter-panel">
+      <div class="filter-panel-title">
+        <span id="filter-panel-title"></span>
+        <button class="filter-close" onclick="toggleFilter(null)">✕ 닫기</button>
+      </div>
+      <div class="filter-list" id="filter-list"></div>
     </div>
     <div class="tabs">
       ${
+
+
+
+
+
 
         STORES.map(s => `<button class="tab ${s === activeStore ? 'active' : ''}" onclick="selectStore('${s}')">${s}</button>`).join('')}
       <button class="tab admin-tab ${'관리자' === activeStore ? 'active' : ''}" onclick="selectStore('관리자')">관리자</button>
@@ -817,7 +1002,39 @@
 
 
         ;
+
+        // 필터 패널 내용
+        if (activeFilter)
+            renderFilterPanel(items[activeFilter]);
         renderStore();
+    }
+
+    function toggleFilter(cls) {
+        activeFilter = (activeFilter === cls) ? null : cls;
+        render();
+    }
+
+    function renderFilterPanel(items) {
+        const labels = {
+            danger: '🔴 위험 (D-7 이내)',
+            warning: '🟠 주의 (D-30 이내)',
+            ok: '🟢 정상',
+            none: '🟡 날짜 미입력'
+        };
+        document.getElementById('filter-panel-title').textContent = `${labels[activeFilter]} — ${items.length}건`;
+        if (!items.length) {
+            document.getElementById('filter-list').innerHTML = '<div style="font-size:12px;color:var(--muted);">해당 항목 없음</div>';
+            return;
+        }
+        document.getElementById('filter-list').innerHTML = items.map(it => `
+    <div class="filter-item">
+      <span class="filter-store-badge">${
+        it.store}</span>
+      <span style="flex:1;font-weight:500;">${it.part}</span>
+      <span class="filter-device">${it.dev}</span>
+      ${ddayBadge(it.st)}
+    </div>`
+        ).join('');
     }
 
     // ── 매장 탭 렌더 ──────────────────────────────────────────
@@ -827,7 +1044,6 @@
             el.innerHTML = renderAdmin();
             return;
         }
-
         const sd = allData[activeStore] || {};
         if (!Object.keys(sd).length) {
             el.innerHTML = '<div class="state-box"><p>데이터가 없습니다.</p></div>';
@@ -847,20 +1063,26 @@
     function renderDevice(dev, parts) {
         const badges = parts.map(p => {
             const st = status(p.next);
-            return `<span class="mini-badge ${st.cls}">${p.part} ${st.label}</span>`;
+            const dayStr = st.days !== null ? ` (${st.days}일)` : '';
+            return miniBadge(st, p.part + dayStr);
         }).join('');
 
         const rows = parts.map(p => {
             const st = status(p.next);
             return `<tr>
       <td><span class="part-name">${p.part}</span></td>
-      <td><span class="part-interval">${p.interval}개월</span></td>
-      <td>${p.last ? `<span class="date-val">${fmt(p.last)}</span>` : '<span class="date-empty">미입력</span>'}</td>
-      <td>${p.next ? `<span class="date-val">${fmt(p.next)}</span>` : '<span class="date-empty">미입력</span>'}</td>
-      <td><span class="dday ${st.cls}">${st.label}</span></td>
+      <td><span class="part-interval" style="color:var(--muted);">${p.interval}개월</span></td>
+      <td style="font-family:var(--sans);font-size:13px;">${p.last ? fmt(p.last) : '<span class="date-empty">미입력</span>'}</td>
+      <td style="font-family:var(--sans);font-size:13px;">${p.next ? fmt(p.next) : '<span class="date-empty">미입력</span>'}</td>
+      <td>${ddayBadge(st)}</td>
       <td>${p.note ? `<span class="note-text">${p.note}</span>` : ''}</td>
-      <td><button class="edit-btn" onclick="openModal('${activeStore}','${esc(dev)}','${esc(p.part)}',${p.interval},'${p.last || ''}','${p.next || ''}')">수정</button></td>
+      <td style="white-space:nowrap;">
+        <button class="edit-btn" onclick="openModal('${
+            activeStore}','${esc(dev)}','${esc(p.part)}',${p.interval},'${p.last || ''}','${p.next || ''}')">수정</button>
+        <button class="hist-btn" onclick="openHistModal('${activeStore}','${esc(dev)}','${esc(p.part)}')">이력</button>
+      </td>
     </tr>`
+
             ;
         }).join('');
 
@@ -874,7 +1096,7 @@
       </div>
       <table class="parts-table">
         <thead><tr>
-          <th>부품명</th><th>주기</th><th>마지막 교체일자</th><th>다음 교체일자</th><th>D-day</th><th>비고</th><th></th>
+          <th>부품명</th><th>주기</th><th>마지막 교체일자</th><th>다음 교체일자</th><th>교체까지</th><th>비고</th><th></th>
         </tr></thead>
         <tbody>${
 
@@ -888,57 +1110,33 @@
         ;
     }
 
-    // ── 관리자 탭 렌더 ────────────────────────────────────────
+    // ── 관리자 탭 ─────────────────────────────────────────────
     function renderAdmin() {
         const admins = loadAdmins();
         const today = todayISO();
-
-        // D-30 이내 교체 대상 수집
         const alerts = [];
-        STORES.forEach(store => {
-            Object.values(allData[store] || {}).forEach(cat =>
-            Object.values(cat).forEach(dev =>
-            dev.forEach(p => {
-                const d = diffDays(today, p.next);
-                if (d !== null && d >= 0 && d <= 30)
-                    alerts.push({
-                        store,
-                        part: p.part,
-                        next: p.next,
-                        dday: d
-                    });
-            })
-            )
-            );
-        });
+        STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
+        Object.values(cat).forEach(dev => dev.forEach(p => {
+            const d = diffDays(today, p.next);
+            if (d !== null && d >= 0 && d <= 30)
+                alerts.push({
+                    store,
+                    part: p.part,
+                    next: p.next,
+                    dday: d
+                });
+        }))
+        ));
 
         const cards = STORES.map(s => {
             const a = admins[s] || {};
             return `
       <div class="admin-card" data-store="${s}">
         <div class="store-badge">${s}</div>
-        <div class="admin-field">
-          <label>담당자 이름</label>
-          <input type="text" class="a-name" placeholder="이름 입력" value="${
-
-            a.name || ''}">
-        </div>
-        <div class="admin-field">
-          <label>연락처</label>
-          <input type="text" class="a-phone" placeholder="010-0000-0000" value="${
-
-
-            a.phone || ''}">
-        </div>
-        <div class="admin-field">
-          <label>이메일</label>
-          <input type="email" class="a-email" placeholder="email@example.com" value="${
-
-
-            a.email || ''}">
-        </div>
-        <button class="admin-save-btn" onclick="saveAdmin('${
-            s}')">저장</button>
+        <div class="admin-field"><label>담당자 이름</label><input type="text" class="a-name" placeholder="이름 입력" value="${a.name || ''}"></div>
+        <div class="admin-field"><label>연락처</label><input type="text" class="a-phone" placeholder="010-0000-0000" value="${a.phone || ''}"></div>
+        <div class="admin-field"><label>이메일</label><input type="email" class="a-email" placeholder="email@example.com" value="${a.email || ''}"></div>
+        <button class="admin-save-btn" onclick="saveAdmin('${s}')">저장</button>
       </div>`
             ;
         }).join('');
@@ -950,8 +1148,8 @@
           <span class="alert-store">${
         a.store}</span>
           <span style="font-weight:500;flex:1;min-width:120px;">${a.part}</span>
-          <span style="font-family:var(--mono);font-size:11px;color:var(--muted);">${fmt(a.next)}</span>
-          <span class="dday warning">D-${a.dday}</span>
+          <span style="font-size:11px;color:var(--muted);">${fmt(a.next)}</span>
+          <span class="dday-badge" style="background:#FFF3E0;color:#EF6C00;font-size:12px;">🟠 D-${a.dday}</span>
         </div>`
         ).join('');
 
@@ -960,7 +1158,7 @@
     <div class="alert-section">
       <h3>교체 알림 발송</h3>
       <p class="alert-desc">D-30 이내 교체 대상 부품을 매장 담당자 이메일로 발송합니다.</p>
-      <div class="alert-list">${
+      <div>${
 
 
         alertItems}</div>
@@ -988,27 +1186,21 @@
             btn.disabled = true;
             btn.textContent = '발송 중...';
         }
-
         const byStore = {};
-        STORES.forEach(store => {
-            Object.values(allData[store] || {}).forEach(cat =>
-            Object.values(cat).forEach(dev =>
-            dev.forEach(p => {
-                const d = diffDays(todayISO(), p.next);
-                if (d !== null && d >= 0 && d <= 30) {
-                    if (!byStore[store])
-                        byStore[store] = [];
-                    byStore[store].push({
-                        part: p.part,
-                        next: p.next,
-                        dday: d
-                    });
-                }
-            })
-            )
-            );
-        });
-
+        STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
+        Object.values(cat).forEach(dev => dev.forEach(p => {
+            const d = diffDays(todayISO(), p.next);
+            if (d !== null && d >= 0 && d <= 30) {
+                if (!byStore[store])
+                    byStore[store] = [];
+                byStore[store].push({
+                    part: p.part,
+                    next: p.next,
+                    dday: d
+                });
+            }
+        }))
+        ));
         let sent = 0,
             failed = 0;
         for (const [store, parts] of Object.entries(byStore)) {
@@ -1017,11 +1209,9 @@
                 failed++;
                 continue;
             }
-
             const partLines = parts.map(p =>
             `교체해야 할 부품명 : ${p.part}\n만료 예정일 : ${fmt(p.next)}\n남은 기간 : D-${p.dday}`
             ).join('\n\n');
-
             try {
                 const res = await fetch(APPS_SCRIPT_URL, {
                     method: 'POST',
@@ -1041,24 +1231,21 @@
                 failed++;
             }
         }
-
         showToast(`발송 완료 ${sent}건${failed > 0 ? ' / 실패 ' + failed + '건' : ''}`);
         if (btn) {
             btn.disabled = false;
-            btn.textContent = `메일 발송`;
+            btn.textContent = '메일 발송';
         }
     }
 
     // ── 탭 전환 ───────────────────────────────────────────────
     function selectStore(s) {
         activeStore = s;
-        document.querySelectorAll('.tab').forEach(t =>
-        t.classList.toggle('active', t.textContent.trim() === s)
-        );
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent.trim() === s));
         renderStore();
     }
 
-    // ── 모달 ──────────────────────────────────────────────────
+    // ── 수정 모달 ─────────────────────────────────────────────
     function openModal(store, dev, part, interval, last, next) {
         editTarget = {
             store,
@@ -1070,6 +1257,8 @@
         document.getElementById('m-sub').textContent = `${store} · ${dev} · ${interval}개월 주기`;
         document.getElementById('m-last').value = last || '';
         document.getElementById('m-next').value = next || '';
+        document.getElementById('m-manager').value = '';
+        document.getElementById('m-memo').value = '';
         document.getElementById('m-save').disabled = false;
         document.getElementById('m-saving').style.display = 'none';
         document.getElementById('modal').classList.add('open');
@@ -1089,6 +1278,8 @@
             return;
         const last = document.getElementById('m-last').value;
         const next = document.getElementById('m-next').value;
+        const manager = document.getElementById('m-manager').value.trim();
+        const memo = document.getElementById('m-memo').value.trim();
         document.getElementById('m-save').disabled = true;
         document.getElementById('m-saving').style.display = 'block';
         try {
@@ -1100,13 +1291,14 @@
                     device: editTarget.dev,
                     part: editTarget.part,
                     last,
-                    next
+                    next,
+                    manager,
+                    memo
                 })
             });
             const json = await res.json();
             if (!json.success)
                 throw new Error(json.error);
-            // 로컬 데이터 업데이트
             Object.values(allData[editTarget.store] || {}).forEach(cat => {
                 if (cat[editTarget.dev])
                     cat[editTarget.dev].forEach(p => {
@@ -1117,7 +1309,7 @@
                     });
             });
             closeModal();
-            renderStore();
+            render();
             showToast('저장 완료 ✓');
         } catch (e) {
             document.getElementById('m-save').disabled = false;
@@ -1126,15 +1318,49 @@
         }
     }
 
+    // ── 이력 모달 ─────────────────────────────────────────────
+    async function openHistModal(store, dev, part) {
+        document.getElementById('h-title').textContent = part;
+        document.getElementById('h-sub').textContent = `${store} · ${dev}`;
+        document.getElementById('h-loading').style.display = 'block';
+        document.getElementById('h-list').style.display = 'none';
+        document.getElementById('hist-modal').classList.add('open');
+        try {
+            const url = `${APPS_SCRIPT_URL}?action=getHistory&store=${encodeURIComponent(store)}&device=${encodeURIComponent(dev)}&part=${encodeURIComponent(part)}`;
+            const res = await fetch(url);
+            const json = await res.json();
+            const list = document.getElementById('h-list');
+            if (!json.success || !json.history.length) {
+                list.innerHTML = '<div class="hist-empty">아직 교체 이력이 없습니다.</div>';
+            } else {
+                list.innerHTML = json.history.map(h => `
+        <div class="hist-item">
+          <div class="hist-date">${
+                fmt(h.date)}</div>
+          ${h.manager ? `<div class="hist-manager">담당자: ${h.manager}</div>` : ''}
+          ${h.memo ? `<div class="hist-memo">${h.memo}</div>` : ''}
+        </div>`
+                ).join('');
+            }
+            document.getElementById('h-loading').style.display = 'none';
+            list.style.display = 'block';
+        } catch (e) {
+            document.getElementById('h-list').innerHTML = `<div class="hist-empty">불러오기 실패: ${e.message}</div>`;
+            document.getElementById('h-loading').style.display = 'none';
+            document.getElementById('h-list').style.display = 'block';
+        }
+    }
+    function closeHistModal() {
+        document.getElementById('hist-modal').classList.remove('open');
+    }
+
     // ── 유틸 ──────────────────────────────────────────────────
     const esc = s => String(s).replace(/'/g, "\\'");
     function showLoading() {
-        document.getElementById('app').innerHTML =
-        '<div class="state-box"><div class="spinner"></div><p>불러오는 중...</p></div>';
+        document.getElementById('app').innerHTML = '<div class="state-box"><div class="spinner"></div><p>불러오는 중...</p></div>';
     }
     function showError(m) {
-        document.getElementById('app').innerHTML =
-        `<div class="state-box"><p>로딩 실패<br><small>${m}</small></p></div>`;
+        document.getElementById('app').innerHTML = `<div class="state-box"><p>로딩 실패<br><small>${m}</small></p></div>`;
     }
     function showToast(msg) {
         const t = document.getElementById('toast');
@@ -1143,10 +1369,13 @@
         setTimeout(() => t.classList.remove('show'), 2800);
     }
 
-    // ── 초기화 ────────────────────────────────────────────────
     document.getElementById('modal').addEventListener('click', e => {
         if (e.target === e.currentTarget)
             closeModal();
+    });
+    document.getElementById('hist-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget)
+            closeHistModal();
     });
     loadData();
     </script>
