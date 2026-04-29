@@ -1,1220 +1,916 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>바리스타팀 장비 부품 교체 시스템</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-    *, * ::before, * ::after {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-
-    :root {
-        --bg: #f4f2ee;
-        --surface: #fff;
-        --surface2: #f9f8f5;
-        --border: #e2dfd8;
-        --border2: #d0cdc5;
-        --text: #1a1916;
-        --muted: #7a7770;
-        --accent: #1a1916;
-        --blue: #2d5a8e;
-        --blue-bg: #e8f0fb;
-        --r: 8px;
-        --sans: 'Noto Sans KR', sans-serif;
-        --mono: 'DM Mono', monospace;
-    }
-
-    body {
-        font-family: var(--sans);
-        background: var(--bg);
-        color: var(--text);
-        min-height: 100vh;
-    }
-
-    .page {
-        max-width: 1080px;
-        margin: 0 auto;
-        padding: 2rem 1.5rem 5rem;
-    }
-
-    .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        margin-bottom: 2rem;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .header-left h1 {
-        font-size: 22px;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-    }
-
-    .header-right {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-
-    .date-chip {
-        font-size: 11px;
-        color: var(--muted);
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        padding: 5px 12px;
-    }
-
-    .refresh-btn {
-        font-size: 12px;
-        background: var(--accent);
-        color: #fff;
-        border: none;
-        border-radius: 20px;
-        padding: 6px 14px;
-        cursor: pointer;
-    }/* Summary */
-    .summary {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 10px;
-        margin-bottom: 1.75rem;
-    }
-
-    .s-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--r);
-        padding: .9rem 1rem;
-        cursor: pointer;
-        transition: all .15s;
-        user-select: none;
-    }
-
-    .s-card:hover {
-        border-color: var(--border2);
-        box-shadow: 0 1px 4px rgba(0, 0, 0, .06);
-    }
-
-    .s-card.active-filter {
-        border-color: var(--accent);
-        box-shadow: 0 0 0 2px var(--accent);
-    }
-
-    .s-label {
-        font-size: 11px;
-        color: var(--muted);
-        margin-bottom: 5px;
-    }
-
-    .s-num {
-        font-size: 26px;
-        font-weight: 600;
-        font-family: var(--mono);
-        line-height: 1;
-    }
-
-    .s-card.c-danger .s-num {
-        color: #C62828;
-    }
-
-    .s-card.c-warn .s-num {
-        color: #EF6C00;
-    }
-
-    .s-card.c-ok .s-num {
-        color: #2E7D32;
-    }/* Filter result */
-    .filter-panel {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--r);
-        padding: 1rem 1.25rem;
-        margin-bottom: 1.25rem;
-        display: none;
-    }
-
-    .filter-panel.open {
-        display: block;
-    }
-
-    .filter-panel-title {
-        font-size: 13px;
-        font-weight: 600;
-        margin-bottom: .75rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .filter-close {
-        font-size: 12px;
-        color: var(--muted);
-        cursor: pointer;
-        background: none;
-        border: none;
-    }
-
-    .filter-list {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .filter-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 12px;
-        padding: 6px 8px;
-        background: var(--bg);
-        border-radius: 6px;
-    }
-
-    .filter-store-badge {
-        font-size: 10px;
-        color: var(--blue);
-        background: var(--blue-bg);
-        border-radius: 10px;
-        padding: 1px 8px;
-        white-space: nowrap;
-    }
-
-    .filter-device {
-        color: var(--muted);
-        font-size: 11px;
-    }/* Tabs */
-    .tabs {
-        display: flex;
-        gap: 6px;
-        margin-bottom: 1.25rem;
-        flex-wrap: wrap;
-    }
-
-    .tab {
-        padding: 7px 18px;
-        border-radius: 20px;
-        border: 1px solid var(--border);
-        background: var(--surface);
-        font-size: 15px;
-        color: var(--muted);
-        cursor: pointer;
-        transition: all .15s;
-    }
-
-    .tab.active {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
-    }
-
-    .tab.admin-tab.active {
-        background: var(--blue);
-        border-color: var(--blue);
-    }/* Category */
-    .cat-block {
-        margin-bottom: 1.5rem;
-    }
-
-    .cat-title {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--muted);
-        letter-spacing: .06em;
-        text-transform: uppercase;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .cat-title::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: var(--border);
-    }/* Device */
-    .device-block {
-        margin-bottom: 1rem;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--r);
-        overflow: hidden;
-    }
-
-    .device-header {
-        padding: .75rem 1rem;
-        background: var(--surface2);
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: .5rem;
-        flex-wrap: wrap;
-    }
-
-    .device-name {
-        font-size: 16px;
-        font-weight: 700;
-    }
-
-    .device-status {
-        display: flex;
-        gap: 5px;
-        flex-wrap: wrap;
-    }
-
-    .mini-badge {
-        font-size: 10px;
-        padding: 2px 7px;
-        border-radius: 10px;
-        font-weight: 500;
-    }/* Table */
-    .parts-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .parts-table th {
-        font-size: 13px;
-        color: var(--muted);
-        font-weight: 500;
-        padding: 7px 1rem;
-        text-align: left;
-        border-bottom: 1px solid var(--border);
-        background: var(--surface2);
-    }
-
-    .parts-table td {
-        font-size: 13px;
-        padding: 9px 1rem;
-        border-bottom: 1px solid var(--border);
-        vertical-align: middle;
-    }
-
-    .parts-table tr:last-child td {
-        border-bottom: none;
-    }
-
-    .parts-table tr:hover td {
-        background: #faf9f6;
-    }
-
-    .part-name {
-        font-weight: 500;
-    }
-
-    .part-interval {
-        color: var(--muted);
-    }
-
-    .date-empty {
-        color: var(--muted);
-        font-style: italic;
-    }/* 교체까지 배지 */
-    .dday-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        font-size: 12px;
-        font-weight: 700;
-        padding: 3px 10px;
-        border-radius: 20px;
-        white-space: nowrap;
-    }/* 버튼 */
-    .edit-btn {
-        font-size: 11px;
-        color: var(--muted);
-        background: none;
-        border: 1px solid var(--border);
-        border-radius: 5px;
-        padding: 3px 8px;
-        cursor: pointer;
-        margin-right: 4px;
-    }
-
-    .edit-btn:hover {
-        color: var(--text);
-        border-color: var(--border2);
-    }
-
-    .hist-btn {
-        font-size: 11px;
-        color: var(--blue);
-        border: 1px solid var(--blue-bg);
-        border-radius: 5px;
-        padding: 3px 8px;
-        cursor: pointer;
-        background: var(--blue-bg);
-    }
-
-    .hist-btn:hover {
-        background: #d0e0f5;
-    }
-
-    .note-text {
-        font-size: 11px;
-        color: var(--muted);
-        font-style: italic;
-    }/* 관리자 탭 */
-    .admin-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 14px;
-        margin-bottom: 1.5rem;
-    }
-
-    .admin-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--r);
-        padding: 1.1rem 1.25rem;
-    }
-
-    .store-badge {
-        font-size: 10px;
-        font-weight: 600;
-        color: var(--blue);
-        background: var(--blue-bg);
-        border-radius: 20px;
-        padding: 2px 10px;
-        display: inline-block;
-        margin-bottom: 10px;
-    }
-
-    .admin-field {
-        margin-bottom: 8px;
-    }
-
-    .admin-field label {
-        font-size: 10px;
-        color: var(--muted);
-        display: block;
-        margin-bottom: 3px;
-    }
-
-    .admin-field input {
-        width: 100%;
-        font-size: 12px;
-        padding: 5px 8px;
-        border: 1px solid var(--border);
-        border-radius: 5px;
-        background: var(--bg);
-        color: var(--text);
-    }
-
-    .admin-field input:focus {
-        outline: none;
-        border-color: var(--border2);
-    }
-
-    .admin-save-btn {
-        width: 100%;
-        margin-top: 10px;
-        padding: 7px;
-        background: var(--accent);
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        font-size: 12px;
-        cursor: pointer;
-    }
-
-    .alert-section {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--r);
-        padding: 1.25rem;
-    }
-
-    .alert-section h3 {
-        font-size: 14px;
-        font-weight: 600;
-        margin-bottom: 4px;
-    }
-
-    .alert-desc {
-        font-size: 12px;
-        color: var(--muted);
-        margin-bottom: 1rem;
-    }
-
-    .alert-btn {
-        padding: 8px 20px;
-        background: var(--blue);
-        color: #fff;
-        border: none;
-        border-radius: 20px;
-        font-size: 13px;
-        cursor: pointer;
-        margin-top: 1rem;
-    }
-
-    .alert-btn:disabled {
-        opacity: .5;
-        cursor: not-allowed;
-    }
-
-    .alert-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid var(--border);
-        font-size: 12px;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-
-    .alert-item:last-child {
-        border-bottom: none;
-    }
-
-    .alert-store {
-        font-size: 10px;
-        color: var(--blue);
-        background: var(--blue-bg);
-        border-radius: 10px;
-        padding: 1px 8px;
-        white-space: nowrap;
-    }/* States */
-    .state-box {
-        text-align: center;
-        padding: 3rem 1rem;
-        color: var(--muted);
-    }
-
-    .spinner {
-        width: 24px;
-        height: 24px;
-        border: 2px solid var(--border);
-        border-top-color: var(--accent);
-        border-radius: 50%;
-        animation: spin .7s linear infinite;
-        margin: 0 auto 1rem;
-    }
-
-    @keyframes spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }/* Modal */
-    .overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, .38);
-        z-index: 200;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .overlay.open {
-        display: flex;
-    }
-
-    .modal {
-        background: var(--surface);
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        padding: 1.5rem;
-        width: 380px;
-        max-width: 94vw;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-
-    .modal h3 {
-        font-size: 15px;
-        font-weight: 600;
-        margin-bottom: 3px;
-    }
-
-    .modal .msub {
-        font-size: 11px;
-        color: var(--muted);
-        margin-bottom: 1.25rem;
-    }
-
-    .modal label {
-        font-size: 11px;
-        color: var(--muted);
-        display: block;
-        margin-bottom: 4px;
-        margin-top: 12px;
-    }
-
-    .modal input[type=date], .modal input[type=text], .modal textarea {
-        width: 100%;
-        padding: 8px 10px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        font-size: 13px;
-        background: var(--bg);
-        color: var(--text);
-        font-family: var(--sans);
-    }
-
-    .modal textarea {
-        resize: vertical;
-        min-height: 60px;
-    }
-
-    .modal input:focus, .modal textarea:focus {
-        outline: none;
-        border-color: var(--border2);
-    }
-
-    .auto-btn {
-        margin-top: 8px;
-        font-size: 11px;
-        padding: 5px 12px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: var(--bg);
-        cursor: pointer;
-    }
-
-    .modal-btns {
-        display: flex;
-        gap: 8px;
-        margin-top: 1.25rem;
-    }
-
-    .modal-btns button {
-        flex: 1;
-        padding: 9px;
-        border-radius: 6px;
-        border: 1px solid var(--border);
-        font-size: 13px;
-        cursor: pointer;
-    }
-
-    .btn-cancel {
-        background: var(--bg);
-        color: var(--muted);
-    }
-
-    .btn-save {
-        background: var(--accent);
-        color: #fff;
-        border-color: var(--accent);
-        font-weight: 500;
-    }
-
-    .btn-save:disabled {
-        opacity: .45;
-        cursor: not-allowed;
-    }
-
-    .saving {
-        font-size: 11px;
-        color: var(--muted);
-        text-align: center;
-        margin-top: 6px;
-        display: none;
-    }/* History modal */
-    .hist-item {
-        padding: 10px 0;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .hist-item:last-child {
-        border-bottom: none;
-    }
-
-    .hist-date {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text);
-    }
-
-    .hist-manager {
-        font-size: 12px;
-        color: var(--blue);
-        margin-top: 2px;
-    }
-
-    .hist-memo {
-        font-size: 12px;
-        color: var(--muted);
-        margin-top: 3px;
-        font-style: italic;
-    }
-
-    .hist-empty {
-        font-size: 12px;
-        color: var(--muted);
-        padding: 1rem 0;
-        text-align: center;
-    }/* Toast */
-    .toast {
-        position: fixed;
-        bottom: 2rem;
-        left: 50%;
-        transform: translateX(-50%) translateY(60px);
-        background: var(--accent);
-        color: #fff;
-        font-size: 12px;
-        padding: 9px 20px;
-        border-radius: 20px;
-        opacity: 0;
-        transition: all .25s;
-        z-index: 999;
-        pointer-events: none;
-        white-space: nowrap;
-    }
-
-    .toast.show {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0);
-    }
-
-    @media (max-width: 600px) {
-        .header-left h1 {
-            font-size: 22px;
-        }
-
-        .tab {
-            font-size: 13px;
-        }
-
-        .cat-title {
-            font-size: 13px;
-        }
-
-        .device-name {
-            font-size: 13px !important;
-        }
-
-        .parts-table th {
-            font-size: 12px;
-        }
-
-        .parts-table td {
-            font-size: 12px;
-        }
-
-        .dday-badge {
-            font-size: 12px;
-        }
-
-        .s-num {
-            font-size: 26px;
-        }
-
-        .s-label {
-            font-size: 11px;
-        }
-
-        .filter-item {
-            font-size: 12px;
-        }
-
-        .summary {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .parts-table th:nth-child(2), .parts-table td:nth-child(2), .parts-table th:nth-child(3), .parts-table td:nth-child(3), .parts-table th:nth-child(4), .parts-table td:nth-child(4), .parts-table th:nth-child(6), .parts-table td:nth-child(6) {
-            display: none;
-        }
-
-        .part-sub {
-            display: block;
-            font-size: 10px;
-            color: var(--muted);
-            margin-top: 2px;
-        }
-
-        .header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-    }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>바리스타팀 장비 부품 교체 시스템</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f4f2ee; --surface:#fff; --surface2:#f9f8f5;
+  --border:#e2dfd8; --border2:#d0cdc5; --text:#1a1916; --muted:#7a7770;
+  --accent:#1a1916; --blue:#2d5a8e; --blue-bg:#e8f0fb;
+  --sidebar-w:200px; --r:8px;
+  --sans:'Noto Sans KR',sans-serif; --mono:'DM Mono',monospace;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;}
+
+/* ── Sidebar ── */
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--accent);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:100;}
+.sidebar-logo{padding:1.4rem 1.2rem 1rem;border-bottom:1px solid #333;}
+.sidebar-logo .brand{font-size:13px;font-weight:700;color:#fff;letter-spacing:.05em;line-height:1.4;}
+.sidebar-logo .sub{font-size:12px;color:#888;margin-top:2px;}
+.sidebar-section{padding:.75rem 1rem .25rem;font-size:12px;color:#666;letter-spacing:.08em;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:.6rem 1.2rem;font-size:13px;color:#aaa;cursor:pointer;transition:all .15s;border-left:3px solid transparent;}
+.nav-item:hover{background:#ffffff12;color:#fff;}
+.nav-item.active{background:#ffffff18;color:#fff;border-left-color:#fff;}
+.nav-item .nav-icon{font-size:14px;width:18px;text-align:center;}
+.nav-store{display:flex;align-items:center;gap:8px;padding:.5rem 1.2rem .5rem 1.5rem;font-size:13px;color:#aaa;cursor:pointer;transition:all .15s;border-left:3px solid transparent;}
+.nav-store:hover{background:#ffffff12;color:#fff;}
+.nav-store.active{color:#fff;border-left-color:#fff;}
+.nav-store .store-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.sidebar-bottom{margin-top:auto;padding:1rem 1.2rem;border-top:1px solid #333;}
+.date-small{font-size:10px;color:#666;font-family:var(--mono);}
+
+/* ── Main ── */
+.main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:.85rem 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;position:sticky;top:0;z-index:50;}
+.topbar-title{font-size:16px;font-weight:600;color:var(--text);}
+.topbar-right{display:flex;gap:8px;align-items:center;}
+.date-chip{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-family:var(--mono);}
+.refresh-btn{font-size:12px;background:var(--accent);color:#fff;border:none;border-radius:20px;padding:6px 14px;cursor:pointer;}
+
+.content{padding:1.5rem 1.75rem 4rem;flex:1;}
+
+/* ── Summary ── */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.75rem;}
+.s-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem 1.25rem;cursor:pointer;transition:all .15s;user-select:none;}
+.s-card:hover{border-color:var(--border2);box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.s-card.active-filter{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);}
+.s-label{font-size:12px;color:var(--muted);margin-bottom:8px;}
+.s-num{font-size:34px;font-weight:600;font-family:var(--mono);line-height:1;}
+.s-card.c-danger .s-num{color:#C62828;}
+.s-card.c-warn .s-num{color:#EF6C00;}
+.s-card.c-ok .s-num{color:#2E7D32;}
+
+/* ── Filter panel ── */
+.filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1.25rem;display:none;}
+.filter-panel.open{display:block;}
+.filter-panel-title{font-size:13px;font-weight:600;margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;}
+.filter-close{font-size:12px;color:var(--muted);cursor:pointer;background:none;border:none;}
+.filter-list{display:flex;flex-direction:column;gap:6px;}
+.filter-item{display:flex;align-items:center;gap:10px;font-size:12px;padding:6px 8px;background:var(--bg);border-radius:6px;}
+.filter-store-badge{font-size:10px;border-radius:10px;padding:2px 9px;white-space:nowrap;font-weight:600;}
+.filter-device{color:var(--muted);font-size:11px;}
+
+/* ── Category ── */
+.cat-block{margin-bottom:1.5rem;}
+.cat-title{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.cat-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── Device ── */
+.device-block{margin-bottom:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.device-header{padding:.75rem 1rem;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;}
+.device-name{font-size:16px;font-weight:700;}
+.device-status{display:flex;gap:5px;flex-wrap:wrap;}
+.mini-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;}
+
+/* ── Table ── */
+.parts-table{width:100%;border-collapse:collapse;}
+.parts-table th{font-size:13px;color:var(--muted);font-weight:500;padding:7px 1rem;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2);}
+.parts-table td{font-size:13px;padding:9px 1rem;border-bottom:1px solid var(--border);vertical-align:middle;}
+.parts-table tr:last-child td{border-bottom:none;}
+.parts-table tr:hover td{background:#faf9f6;}
+.part-name{font-weight:500;}
+.part-sub{display:block;font-size:10px;color:var(--muted);margin-top:2px;}
+.part-interval{color:var(--muted);}
+.date-empty{color:var(--muted);font-style:italic;}
+.dday-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;}
+.edit-btn{font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;cursor:pointer;margin-right:4px;}
+.edit-btn:hover{color:var(--text);border-color:var(--border2);}
+.hist-btn{font-size:11px;color:var(--blue);border:1px solid var(--blue-bg);border-radius:5px;padding:3px 8px;cursor:pointer;background:var(--blue-bg);}
+.hist-btn:hover{background:#d0e0f5;}
+.note-text{font-size:11px;color:var(--muted);font-style:italic;}
+
+/* ── Admin ── */
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:1.5rem;}
+.admin-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;}
+.store-badge{font-size:10px;font-weight:600;border-radius:20px;padding:3px 12px;display:inline-block;margin-bottom:10px;}
+.admin-field{margin-bottom:8px;}
+.admin-field label{font-size:10px;color:var(--muted);display:block;margin-bottom:3px;}
+.admin-field input{width:100%;font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);}
+.admin-field input:focus{outline:none;border-color:var(--border2);}
+.admin-save-btn{width:100%;margin-top:10px;padding:7px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;}
+.alert-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;}
+.alert-section h3{font-size:14px;font-weight:600;margin-bottom:4px;}
+.alert-desc{font-size:12px;color:var(--muted);margin-bottom:1rem;}
+.alert-btn{padding:8px 20px;background:var(--blue);color:#fff;border:none;border-radius:20px;font-size:13px;cursor:pointer;margin-top:1rem;}
+.alert-btn:disabled{opacity:.5;cursor:not-allowed;}
+.alert-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;gap:8px;flex-wrap:wrap;}
+.alert-item:last-child{border-bottom:none;}
+.alert-store{font-size:10px;border-radius:10px;padding:2px 9px;white-space:nowrap;font-weight:600;}
+
+/* ── States ── */
+.state-box{text-align:center;padding:3rem 1rem;color:var(--muted);}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 1rem;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── Modal ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:200;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:1.5rem;width:380px;max-width:94vw;max-height:90vh;overflow-y:auto;}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:3px;}
+.modal .msub{font-size:11px;color:var(--muted);margin-bottom:1.25rem;}
+.modal label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;margin-top:12px;}
+.modal input[type=date],.modal input[type=text],.modal textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);font-family:var(--sans);}
+.modal textarea{resize:vertical;min-height:60px;}
+.modal input:focus,.modal textarea:focus{outline:none;border-color:var(--border2);}
+.auto-btn{margin-top:8px;font-size:11px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;}
+.modal-btns{display:flex;gap:8px;margin-top:1.25rem;}
+.modal-btns button{flex:1;padding:9px;border-radius:6px;border:1px solid var(--border);font-size:13px;cursor:pointer;}
+.btn-cancel{background:var(--bg);color:var(--muted);}
+.btn-save{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:500;}
+.btn-save:disabled{opacity:.45;cursor:not-allowed;}
+.saving{font-size:11px;color:var(--muted);text-align:center;margin-top:6px;display:none;}
+.hist-item{padding:10px 0;border-bottom:1px solid var(--border);}
+.hist-item:last-child{border-bottom:none;}
+.hist-date{font-size:13px;font-weight:600;color:var(--text);}
+.hist-manager{font-size:12px;color:var(--blue);margin-top:2px;}
+.hist-memo{font-size:12px;color:var(--muted);margin-top:3px;font-style:italic;}
+.hist-empty{font-size:12px;color:var(--muted);padding:1rem 0;text-align:center;}
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(60px);background:var(--accent);color:#fff;font-size:12px;padding:9px 20px;border-radius:20px;opacity:0;transition:all .25s;z-index:999;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── Mobile ── */
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px;font-size:20px;color:var(--text);}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;}
+.sidebar-overlay.open{display:block;}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .25s;}
+  .sidebar.open{transform:translateX(0);}
+  .main{margin-left:0;}
+  .hamburger{display:block;}
+  .summary{grid-template-columns:repeat(2,1fr);}
+  .parts-table th:nth-child(2),.parts-table td:nth-child(2),
+  .parts-table th:nth-child(3),.parts-table td:nth-child(3),
+  .parts-table th:nth-child(4),.parts-table td:nth-child(4),
+  .parts-table th:nth-child(6),.parts-table td:nth-child(6){display:none;}
+  .content{padding:1rem 1rem 4rem;}
+  .topbar{padding:.75rem 1rem;}
+  .s-num{font-size:26px;}
+  .s-label{font-size:11px;}
+  .parts-table th{font-size:12px;}
+  .parts-table td{font-size:12px;}
+  .dday-badge{font-size:12px;}
+  .device-name{font-size:13px !important;}
+  .filter-item{font-size:12px;}
+}
+</style>
 </head>
 <body>
-    <div class="page">
-        <div class="header">
-            <div class="header-left">
-                <h1>바리스타팀 장비 부품 교체 시스템</h1>
-            </div>
-            <div class="header-right">
-                <div class="date-chip" id="date-chip"></div>
-                <button class="refresh-btn" onclick="loadData()">↻ 새로고침</button>
-            </div>
-        </div>
-        <div id="app"></div>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="brand">MOMOS COFFEE</div>
+    <div class="sub">장비 부품 교체 시스템</div>
+  </div>
+
+  <div class="sidebar-section">메인</div>
+  <div class="nav-item active" data-store="대시보드" onclick="selectStore('대시보드')">
+    <span class="nav-icon">📊</span> 대시보드
+  </div>
+
+  <div class="sidebar-section">매장</div>
+  <div class="nav-store" data-store="본점" onclick="selectStore('본점')">
+    <span class="store-dot" style="background:#ffffff;"></span> 본점
+  </div>
+  <div class="nav-store" data-store="영도" onclick="selectStore('영도')">
+    <span class="store-dot" style="background:#5DADE2;"></span> 영도
+  </div>
+  <div class="nav-store" data-store="마린시티" onclick="selectStore('마린시티')">
+    <span class="store-dot" style="background:#52BE80;"></span> 마린시티
+  </div>
+  <div class="nav-store" data-store="도모헌" onclick="selectStore('도모헌')">
+    <span class="store-dot" style="background:#E59866;"></span> 도모헌
+  </div>
+
+  <div class="sidebar-section" style="margin-top:.5rem;">관리</div>
+  <div class="nav-item" data-store="매장별담당자" onclick="selectStore('매장별담당자')">
+    <span class="nav-icon">👥</span> 매장별 담당자
+  </div>
+  <div class="nav-item" data-store="알림발송" onclick="selectStore('알림발송')">
+    <span class="nav-icon">📧</span> 알림 발송
+  </div>
+  <div class="nav-item" data-store="시스템관리자" onclick="selectStore('시스템관리자')">
+    <span class="nav-icon">🔐</span> 시스템 관리자
+  </div>
+
+  <div class="sidebar-bottom">
+    <div class="date-small" id="sidebar-date"></div>
+  </div>
+</div>
+
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <span class="topbar-title" id="topbar-title">대시보드</span>
     </div>
-
-    <!-- 수정 모달 -->
-    <div class="overlay" id="modal">
-        <div class="modal">
-            <h3 id="m-title"></h3>
-            <div class="msub" id="m-sub"></div>
-            <label>마지막 교체일자</label>
-            <input type="date" id="m-last">
-            <label>다음 교체일자</label>
-            <input type="date" id="m-next">
-            <button class="auto-btn" onclick="autoCalc()">교체주기로 자동계산</button>
-            <label>담당자</label>
-            <input type="text" id="m-manager" placeholder="담당자 이름">
-            <label>메모</label>
-            <textarea id="m-memo" placeholder="특이사항, 교체 사유 등"></textarea>
-            <div class="modal-btns">
-                <button class="btn-cancel" onclick="closeModal()">취소</button>
-                <button class="btn-save" id="m-save" onclick="saveModal()">저장</button>
-            </div>
-            <div class="saving" id="m-saving">저장 중...</div>
-        </div>
+    <div class="topbar-right">
+      <div class="date-chip" id="date-chip"></div>
+      <button class="refresh-btn" onclick="loadData()">↻ 새로고침</button>
     </div>
+  </div>
 
-    <!-- 이력 모달 -->
-    <div class="overlay" id="hist-modal">
-        <div class="modal">
-            <h3 id="h-title"></h3>
-            <div class="msub" id="h-sub"></div>
-            <div id="h-loading" class="state-box" style="padding:1.5rem 0;">
-                <div class="spinner"></div>
-            </div>
-            <div id="h-list" style="display:none;"></div>
-            <div class="modal-btns" style="margin-top:1rem;">
-                <button class="btn-cancel" onclick="closeHistModal()">닫기</button>
-            </div>
-        </div>
+  <div class="content">
+    <div id="app"></div>
+  </div>
+</div>
+
+<!-- 수정 모달 -->
+<div class="overlay" id="modal">
+  <div class="modal">
+    <h3 id="m-title"></h3>
+    <div class="msub" id="m-sub"></div>
+    <label>마지막 교체일자</label>
+    <input type="date" id="m-last">
+    <label>다음 교체일자</label>
+    <input type="date" id="m-next">
+    <button class="auto-btn" onclick="autoCalc()">교체주기로 자동계산</button>
+    <label>담당자</label>
+    <input type="text" id="m-manager" placeholder="담당자 이름">
+    <label>메모</label>
+    <textarea id="m-memo" placeholder="특이사항, 교체 사유 등"></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-save" id="m-save" onclick="saveModal()">저장</button>
     </div>
+    <div class="saving" id="m-saving">저장 중...</div>
+  </div>
+</div>
 
-    <div class="toast" id="toast"></div>
+<!-- 이력 모달 -->
+<div class="overlay" id="hist-modal">
+  <div class="modal">
+    <h3 id="h-title"></h3>
+    <div class="msub" id="h-sub"></div>
+    <div id="h-loading" class="state-box" style="padding:1.5rem 0;"><div class="spinner"></div></div>
+    <div id="h-list" style="display:none;"></div>
+    <div class="modal-btns" style="margin-top:1rem;">
+      <button class="btn-cancel" onclick="closeHistModal()">닫기</button>
+    </div>
+  </div>
+</div>
 
-    <script>
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec';
-    const STORES    = ['본점','영도','마린시티','도모헌'];
+<div class="toast" id="toast"></div>
 
-    // ── 매장별 배지 색상 ──────────────────────────────────────
-    const STORE_COLORS = {
-      '본점':    {bg:'#1A1916', fg:'#FFFFFF'},
-      '영도':    {bg:'#1B4F72', fg:'#FFFFFF'},
-      '마린시티': {bg:'#1E8449', fg:'#FFFFFF'},
-      '도모헌':  {bg:'#784212', fg:'#FFFFFF'},
-    };
-    function storeBadgeStyle(store) {
-      const c = STORE_COLORS[store] || {bg:'#e8f0fb', fg:'#2d5a8e'};
-      return \`background:\${c.bg};color:\${c.fg}\`;
-    }
-    const ADMIN_KEY = 'eq_admins_v1';
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec';
+const STORES = ['본점','영도','마린시티','도모헌'];
+const ADMIN_KEY = 'eq_admins_v1';
 
-    let allData     = null;
-    let activeStore = STORES[0];
-    let activeFilter = null; // 'danger' | 'warning' | 'ok' | 'none' | null
-    let editTarget  = null;
+const STORE_COLORS = {
+  '본점':    {bg:'#1A1916', fg:'#FFFFFF'},
+  '영도':    {bg:'#1B4F72', fg:'#FFFFFF'},
+  '마린시티': {bg:'#1E8449', fg:'#FFFFFF'},
+  '도모헌':  {bg:'#784212', fg:'#FFFFFF'},
+};
+function storeBadgeStyle(store) {
+  const c = STORE_COLORS[store]||{bg:'#e8f0fb',fg:'#2d5a8e'};
+  return `background:${c.bg};color:${c.fg}`;
+}
 
-    // ── 날짜 유틸 ─────────────────────────────────────────────
-    function parseISO(val) {
-      if (!val || !String(val).trim()) return null;
-      const m = String(val).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (!m) return null;
-      return new Date(+m[1], +m[2]-1, +m[3]);
-    }
-    function fmt(iso) {
-      const d = parseISO(iso);
-      if (!d) return '';
-      return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}`;
-    }
-    function todayISO() {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    }
-    function diffDays(a, b) {
-      const da=parseISO(a), db=parseISO(b);
-      if (!da||!db) return null;
-      return Math.round((db-da)/86400000);
-    }
-    function addDays(iso, n) {
-      const d=parseISO(iso); if (!d) return '';
-      d.setDate(d.getDate()+n);
-      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    }
+let allData     = null;
+let activeStore = '대시보드';
+let activeFilter = null;
+let editTarget  = null;
 
-    // ── 상태 계산 ─────────────────────────────────────────────
-    function status(nextISO) {
-      if (!nextISO||!nextISO.trim()) return {cls:'none', days:null};
-      const d = diffDays(todayISO(), nextISO);
-      if (d===null)  return {cls:'none',    days:null};
-      if (d<0)       return {cls:'overdue', days:Math.abs(d)};
-      if (d<=7)      return {cls:'danger',  days:d};
-      if (d<=30)     return {cls:'warning', days:d};
-      return               {cls:'ok',      days:d};
-    }
+// ── 날짜 유틸 ─────────────────────────────────────────────
+function parseISO(val) {
+  if (!val||!String(val).trim()) return null;
+  const m = String(val).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  return new Date(+m[1],+m[2]-1,+m[3]);
+}
+function fmt(iso) {
+  const d=parseISO(iso); if (!d) return '';
+  return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}`;
+}
+function todayISO() {
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function diffDays(a,b) {
+  const da=parseISO(a),db=parseISO(b);
+  if (!da||!db) return null;
+  return Math.round((db-da)/86400000);
+}
+function addDays(iso,n) {
+  const d=parseISO(iso); if (!d) return '';
+  d.setDate(d.getDate()+n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
-    // 배지 HTML 생성
-    function ddayBadge(st) {
-      const cfg = {
-        ok:      {bg:'#E8F5E9', fg:'#2E7D32', icon:'🟢', label:'여유'},
-        warning: {bg:'#FFF3E0', fg:'#EF6C00', icon:'🟠', label:'교체 예정'},
-        danger:  {bg:'#FDECEA', fg:'#C62828', icon:'🔴', label:'즉시 교체'},
-        overdue: {bg:'#F5F5F5', fg:'#616161', icon:'⚫', label:'지남'},
-        none:    {bg:'#FFF8E1', fg:'#F57F17', icon:'🟡', label:'미입력'},
-      };
-      const c = cfg[st.cls] || cfg.none;
-      const dayStr = st.days !== null ? ` (${st.days}일)` : '';
-      return `<span class="dday-badge" style="background:${c.bg};color:${c.fg};">${c.icon} ${c.label}${dayStr}</span>`;
-    }
+function status(nextISO) {
+  if (!nextISO||!nextISO.trim()) return {cls:'none',days:null};
+  const d=diffDays(todayISO(),nextISO);
+  if (d===null)  return {cls:'none',   days:null};
+  if (d<0)       return {cls:'overdue',days:Math.abs(d)};
+  if (d<=7)      return {cls:'danger', days:d};
+  if (d<=30)     return {cls:'warning',days:d};
+  return               {cls:'ok',     days:d};
+}
 
-    // 미니 배지 (장비 헤더용)
-    function miniBadge(st, label) {
-      const cfg = {
-        ok:      {bg:'#E8F5E9',fg:'#2E7D32'},
-        warning: {bg:'#FFF3E0',fg:'#EF6C00'},
-        danger:  {bg:'#FDECEA',fg:'#C62828'},
-        overdue: {bg:'#F5F5F5',fg:'#616161'},
-        none:    {bg:'#FFF8E1',fg:'#F57F17'},
-      };
-      const c = cfg[st.cls]||cfg.none;
-      return `<span class="mini-badge" style="background:${c.bg};color:${c.fg};">${label}</span>`;
-    }
+function ddayBadge(st) {
+  const cfg={
+    ok:     {bg:'#E8F5E9',fg:'#2E7D32',icon:'🟢',label:'여유'},
+    warning:{bg:'#FFF3E0',fg:'#EF6C00',icon:'🟠',label:'교체 예정'},
+    danger: {bg:'#FDECEA',fg:'#C62828',icon:'🔴',label:'즉시 교체'},
+    overdue:{bg:'#F5F5F5',fg:'#616161',icon:'⚫',label:'지남'},
+    none:   {bg:'#FFF8E1',fg:'#F57F17',icon:'🟡',label:'미입력'},
+  };
+  const c=cfg[st.cls]||cfg.none;
+  const dayStr=st.days!==null?` (${st.days}일)`:'';
+  return `<span class="dday-badge" style="background:${c.bg};color:${c.fg};">${c.icon} ${c.label}${dayStr}</span>`;
+}
 
-    // ── 관리자 정보 ───────────────────────────────────────────
-    function loadAdmins() { try{return JSON.parse(localStorage.getItem(ADMIN_KEY))||{};}catch(e){return{};} }
-    function saveAdmins(d) { try{localStorage.setItem(ADMIN_KEY,JSON.stringify(d));}catch(e){} }
+function miniBadge(st,label) {
+  const cfg={
+    ok:     {bg:'#E8F5E9',fg:'#2E7D32'},
+    warning:{bg:'#FFF3E0',fg:'#EF6C00'},
+    danger: {bg:'#FDECEA',fg:'#C62828'},
+    overdue:{bg:'#F5F5F5',fg:'#616161'},
+    none:   {bg:'#FFF8E1',fg:'#F57F17'},
+  };
+  const c=cfg[st.cls]||cfg.none;
+  return `<span class="mini-badge" style="background:${c.bg};color:${c.fg};">${label}</span>`;
+}
 
-    // ── 데이터 로딩 ───────────────────────────────────────────
-    async function loadData() {
-      showLoading();
-      try {
-        const res  = await fetch(`${APPS_SCRIPT_URL}?action=getData`);
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-        allData = json.data;
-        activeFilter = null;
-        render();
-      } catch(e) { showError(e.message); }
-    }
+function loadAdmins(){try{return JSON.parse(localStorage.getItem(ADMIN_KEY))||{};}catch(e){return{};}}
+function saveAdmins(d){try{localStorage.setItem(ADMIN_KEY,JSON.stringify(d));}catch(e){}}
 
-    // ── 전체 렌더 ─────────────────────────────────────────────
-    function render() {
-      document.getElementById('date-chip').textContent = `기준 ${fmt(todayISO())}`;
+// ── 사이드바 ──────────────────────────────────────────────
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
 
-      // 카운트 + 필터용 목록 수집
-      const counts = {danger:0, warning:0, ok:0, none:0};
-      const items  = {danger:[], warning:[], ok:[], none:[]};
+// ── 데이터 로딩 ───────────────────────────────────────────
+async function loadData() {
+  showLoading();
+  try {
+    const res=await fetch(`${APPS_SCRIPT_URL}?action=getData`);
+    const json=await res.json();
+    if (!json.success) throw new Error(json.error);
+    allData=json.data;
+    activeFilter=null;
+    render();
+  } catch(e){showError(e.message);}
+}
 
-      STORES.forEach(store => {
-        Object.values(allData[store]||{}).forEach(cat =>
-          Object.entries(cat).forEach(([dev, parts]) =>
-            parts.forEach(p => {
-              const st = status(p.next);
-              const cls = st.cls === 'overdue' ? 'danger' : st.cls;
-              counts[cls]++;
-              items[cls].push({store, dev, part:p.part, next:p.next, st});
-            })
-          )
-        );
-      });
+// ── 렌더 ──────────────────────────────────────────────────
+function render() {
+  const today=todayISO();
+  document.getElementById('date-chip').textContent=`기준 ${fmt(today)}`;
+  document.getElementById('sidebar-date').textContent=fmt(today);
 
-      document.getElementById('app').innerHTML = `
-        <div class="summary">
-          <div class="s-card c-danger ${activeFilter==='danger'?'active-filter':''}" onclick="toggleFilter('danger')">
-            <div class="s-label">🔴 위험 (D-7 이내)</div><div class="s-num">${counts.danger}</div>
-          </div>
-          <div class="s-card c-warn ${activeFilter==='warning'?'active-filter':''}" onclick="toggleFilter('warning')">
-            <div class="s-label">🟠 주의 (D-30 이내)</div><div class="s-num">${counts.warning}</div>
-          </div>
-          <div class="s-card c-ok ${activeFilter==='ok'?'active-filter':''}" onclick="toggleFilter('ok')">
-            <div class="s-label">🟢 정상</div><div class="s-num">${counts.ok}</div>
-          </div>
-          <div class="s-card ${activeFilter==='none'?'active-filter':''}" onclick="toggleFilter('none')">
-            <div class="s-label">🟡 날짜 미입력</div><div class="s-num" style="color:var(--muted)">${counts.none}</div>
+  document.getElementById('app').innerHTML=`<div id="store-content"></div>`;
+  renderStore();
+  updateSidebarActive();
+}
+
+function toggleFilter(cls){
+  activeFilter=(activeFilter===cls)?null:cls;
+  renderStore();
+}
+
+function renderFilterPanel(items){
+  const labels={danger:'🔴 위험 (D-7 이내)',warning:'🟠 주의 (D-30 이내)',ok:'🟢 정상',none:'🟡 날짜 미입력'};
+  document.getElementById('filter-panel-title').textContent=`${labels[activeFilter]} — ${items.length}건`;
+  if (!items.length){
+    document.getElementById('filter-list').innerHTML='<div style="font-size:12px;color:var(--muted);">해당 항목 없음</div>';
+    return;
+  }
+  document.getElementById('filter-list').innerHTML=items.map(it=>`
+    <div class="filter-item">
+      <span class="filter-store-badge" style="${storeBadgeStyle(it.store)}">${it.store}</span>
+      <span style="flex:1;font-weight:500;">${it.part}</span>
+      <span class="filter-device">${it.dev}</span>
+      ${ddayBadge(it.st)}
+    </div>`).join('');
+}
+
+function renderStore(){
+  const el=document.getElementById('store-content');
+  if (activeStore==='대시보드'){el.innerHTML=renderDashboard();return;}
+  if (activeStore==='매장별담당자'){el.innerHTML=renderStoreManagers();return;}
+  if (activeStore==='알림발송'){el.innerHTML=renderAlertSend();return;}
+  if (activeStore==='시스템관리자'){el.innerHTML=renderSysAdmin();return;}
+  const sd=allData[activeStore]||{};
+  if (!Object.keys(sd).length){el.innerHTML='<div class="state-box"><p>데이터가 없습니다.</p></div>';return;}
+  el.innerHTML=Object.entries(sd).map(([cat,devices])=>`
+    <div class="cat-block">
+      <div class="cat-title">${cat}</div>
+      ${Object.entries(devices).map(([dev,parts])=>renderDevice(dev,parts)).join('')}
+    </div>
+  `).join('');
+}
+
+// ── 대시보드 ──────────────────────────────────────────────
+function renderDashboard(){
+  const counts={danger:0,warning:0,ok:0,none:0};
+  const items={danger:[],warning:[],ok:[],none:[]};
+  const storeCounts={};
+  STORES.forEach(store=>{
+    storeCounts[store]={total:0,danger:0,warning:0,ok:0,none:0};
+    Object.values(allData[store]||{}).forEach(cat=>
+      Object.entries(cat).forEach(([dev,parts])=>
+        parts.forEach(p=>{
+          const st=status(p.next);
+          const cls=st.cls==='overdue'?'danger':st.cls;
+          counts[cls]++;
+          storeCounts[store].total++;
+          storeCounts[store][cls]++;
+          items[cls].push({store,dev,part:p.part,next:p.next,st});
+        })
+      )
+    );
+  });
+
+  // 매장별 현황 바
+  const storeRows=STORES.map(s=>{
+    const sc=STORE_COLORS[s]||{bg:'#1a1916',fg:'#fff'};
+    const st=storeCounts[s];
+    const total=st.total||1;
+    const dangerPct=Math.round(st.danger/total*100);
+    const warnPct=Math.round(st.warning/total*100);
+    const okPct=Math.round(st.ok/total*100);
+    const nonePct=Math.round(st.none/total*100);
+    return `
+      <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:12px;font-weight:600;border-radius:10px;padding:3px 12px;white-space:nowrap;background:${sc.bg};color:${sc.fg};min-width:72px;text-align:center;">${s}</span>
+        <div style="flex:1;height:10px;border-radius:10px;overflow:hidden;background:#f0eeea;display:flex;">
+          ${st.danger>0?`<div style="width:${dangerPct}%;background:#C62828;"></div>`:''}
+          ${st.warning>0?`<div style="width:${warnPct}%;background:#EF6C00;"></div>`:''}
+          ${st.ok>0?`<div style="width:${okPct}%;background:#2E7D32;"></div>`:''}
+          ${st.none>0?`<div style="width:${nonePct}%;background:#ccc;"></div>`:''}
+        </div>
+        <div style="display:flex;gap:16px;font-size:13px;font-family:var(--mono);white-space:nowrap;">
+          ${st.danger>0?`<span style="color:#C62828;">🔴 ${st.danger}</span>`:''}
+          ${st.warning>0?`<span style="color:#EF6C00;">🟠 ${st.warning}</span>`:''}
+          ${st.ok>0?`<span style="color:#2E7D32;">🟢 ${st.ok}</span>`:''}
+          ${st.none>0?`<span style="color:#aaa;">🟡 ${st.none}</span>`:''}
+        </div>
+        <span style="font-size:12px;color:var(--muted);white-space:nowrap;margin-left:auto;">${st.total}개</span>
+      </div>`;
+  }).join('');
+
+  // 지남 항목만 표시
+  const overdueItems=[];
+  STORES.forEach(store=>{
+    Object.values(allData[store]||{}).forEach(cat=>
+      Object.entries(cat).forEach(([dev,parts])=>
+        parts.forEach(p=>{
+          const st=status(p.next);
+          if (st.cls==='overdue') overdueItems.push({store,dev,part:p.part,next:p.next,st});
+        })
+      )
+    );
+  });
+  overdueItems.sort((a,b)=>b.st.days-a.st.days);
+
+  const overdueTable=overdueItems.length===0
+    ?'<p style="font-size:12px;color:var(--muted);padding:.75rem 0;">교체일 경과 항목 없음 ✓</p>'
+    :`<table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:var(--surface2);">
+            <th style="font-size:13px;color:var(--muted);font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">매장</th>
+            <th style="font-size:13px;color:var(--muted);font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">부품명</th>
+            <th style="font-size:13px;color:var(--muted);font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">장비명</th>
+            <th style="font-size:13px;color:var(--muted);font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">경과</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${overdueItems.map((it,i)=>`
+            <tr style="background:${i%2===0?'var(--surface)':'var(--surface2)'};cursor:pointer;" onclick="selectStore('${it.store}')">
+              <td style="padding:7px 8px;border-bottom:1px solid var(--border);">
+                <span style="font-size:12px;font-weight:600;border-radius:8px;padding:2px 8px;white-space:nowrap;${storeBadgeStyle(it.store)}">${it.store}</span>
+              </td>
+              <td style="padding:7px 8px;border-bottom:1px solid var(--border);font-size:13px;font-weight:500;white-space:nowrap;">${it.part}</td>
+              <td style="padding:7px 8px;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${it.dev}</td>
+              <td style="padding:7px 8px;border-bottom:1px solid var(--border);">
+                <span style="font-size:13px;font-weight:700;background:#F5F5F5;color:#616161;padding:2px 8px;border-radius:10px;white-space:nowrap;">⚫ ${it.st.days}일 경과</span>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+  const filterHtml=activeFilter?`
+    <div class="filter-panel open" id="filter-panel" style="margin-top:1rem;">
+      <div class="filter-panel-title">
+        <span id="filter-panel-title"></span>
+        <button class="filter-close" onclick="toggleFilter(null)">✕ 닫기</button>
+      </div>
+      <div class="filter-list" id="filter-list"></div>
+    </div>`:`
+    <div class="filter-panel" id="filter-panel" style="margin-top:1rem;">
+      <div class="filter-panel-title">
+        <span id="filter-panel-title"></span>
+        <button class="filter-close" onclick="toggleFilter(null)">✕ 닫기</button>
+      </div>
+      <div class="filter-list" id="filter-list"></div>
+    </div>`;
+
+  const total=counts.danger+counts.warning+counts.ok+counts.none;
+  const html=`
+    <div class="summary" style="margin-bottom:1.25rem;">
+      <div class="s-card c-danger ${activeFilter==='danger'?'active-filter':''}" onclick="toggleFilter('danger')" style="padding:1.4rem 1.25rem;">
+        <div class="s-label">🔴 위험 (D-7 이내)</div>
+        <div class="s-num" style="font-size:42px;margin-top:4px;">${counts.danger}</div>
+      </div>
+      <div class="s-card c-warn ${activeFilter==='warning'?'active-filter':''}" onclick="toggleFilter('warning')" style="padding:1.4rem 1.25rem;">
+        <div class="s-label">🟠 주의 (D-30 이내)</div>
+        <div class="s-num" style="font-size:42px;margin-top:4px;">${counts.warning}</div>
+      </div>
+      <div class="s-card c-ok ${activeFilter==='ok'?'active-filter':''}" onclick="toggleFilter('ok')" style="padding:1.4rem 1.25rem;">
+        <div class="s-label">🟢 정상</div>
+        <div class="s-num" style="font-size:42px;margin-top:4px;">${counts.ok}</div>
+      </div>
+      <div class="s-card ${activeFilter==='none'?'active-filter':''}" onclick="toggleFilter('none')" style="padding:1.4rem 1.25rem;">
+        <div class="s-label">🟡 날짜 미입력</div>
+        <div class="s-num" style="font-size:42px;margin-top:4px;color:var(--muted)">${counts.none}</div>
+      </div>
+    </div>
+    ${filterHtml}
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:1rem;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;">
+        <div style="font-size:15px;font-weight:600;margin-bottom:.25rem;">📋 매장별 현황</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:.75rem;">전체 ${total}개 부품</div>
+        ${storeRows}
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;">
+        <div style="font-size:15px;font-weight:600;margin-bottom:.25rem;">⚫ 즉시 확인 필요 <span style="font-size:13px;font-weight:400;color:var(--muted);">— 교체일 경과 항목</span></div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:.75rem;">경과 일수 많은 순 · 행 클릭 시 해당 매장으로 이동</div>
+        ${overdueTable}
+      </div>
+    </div>
+  `;
+  setTimeout(()=>{
+    if (activeFilter) renderFilterPanel(items[activeFilter]);
+  },0);
+  return html;
+}
+
+// ── 매장별 담당자 ─────────────────────────────────────────
+function renderStoreManagers(){
+  const admins=loadAdmins();
+  const cards=STORES.map(s=>{
+    const a=admins[s]||{};
+    const sc=STORE_COLORS[s]||{bg:'#1a1916',fg:'#fff'};
+    return `
+      <div class="admin-card" data-store="${s}">
+        <div class="store-badge" style="background:${sc.bg};color:${sc.fg};">${s}</div>
+        <div class="admin-field"><label>담당자 이름</label><input type="text" class="a-name" placeholder="이름 입력" value="${a.name||''}"></div>
+        <div class="admin-field"><label>연락처</label><input type="text" class="a-phone" placeholder="010-0000-0000" value="${a.phone||''}"></div>
+        <div class="admin-field"><label>이메일</label><input type="email" class="a-email" placeholder="email@example.com" value="${a.email||''}"></div>
+        <button class="admin-save-btn" onclick="saveAdmin('${s}')">저장</button>
+      </div>`;
+  }).join('');
+  return `<div class="admin-grid">${cards}</div>`;
+}
+
+// ── 알림 발송 (관리자 비밀번호 보호) ──────────────────────
+const ADMIN_PW = '940321';
+let pwVerified = false;
+
+function renderAlertSend(){
+  if (!pwVerified) {
+    return `
+      <div class="alert-section" style="max-width:400px;">
+        <h3>🔐 관리자 인증</h3>
+        <p class="alert-desc" style="margin-top:6px;">알림 발송은 관리자만 사용할 수 있습니다.</p>
+        <div style="margin-top:1rem;">
+          <input type="password" id="pw-input" placeholder="관리자 비밀번호 입력"
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);"
+            onkeydown="if(event.key==='Enter')checkPw()">
+          <button onclick="checkPw()" style="margin-top:8px;width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">
+            확인
+          </button>
+          <div id="pw-error" style="font-size:12px;color:#c62828;margin-top:6px;display:none;">비밀번호가 올바르지 않습니다.</div>
+        </div>
+      </div>`;
+  }
+  const admins=loadAdmins();
+  const today=todayISO();
+  const alerts=[];
+  STORES.forEach(store=>Object.values(allData[store]||{}).forEach(cat=>
+    Object.values(cat).forEach(dev=>dev.forEach(p=>{
+      const d=diffDays(today,p.next);
+      if (d!==null&&d>=0&&d<=30) alerts.push({store,part:p.part,next:p.next,dday:d});
+    }))
+  ));
+  const alertItems=alerts.length===0
+    ?'<p style="font-size:12px;color:var(--muted);padding:1rem 0;">D-30 이내 교체 대상 없음</p>'
+    :alerts.map(a=>`
+        <div class="alert-item">
+          <span class="alert-store" style="${storeBadgeStyle(a.store)}">${a.store}</span>
+          <span style="font-weight:500;flex:1;min-width:120px;">${a.part}</span>
+          <span style="font-size:11px;color:var(--muted);">${fmt(a.next)}</span>
+          <span class="dday-badge" style="background:#FFF3E0;color:#EF6C00;font-size:12px;">🟠 D-${a.dday}</span>
+        </div>`).join('');
+  return `
+    <div class="alert-section">
+      <h3>📧 교체 알림 발송</h3>
+      <p class="alert-desc">D-30 이내 교체 대상 부품을 매장 담당자 이메일로 발송합니다.</p>
+      <div>${alertItems}</div>
+      ${alerts.length>0?`<button class="alert-btn" id="send-btn" onclick="sendAlerts()">메일 발송 (${alerts.length}건)</button>`:''}
+      <button onclick="pwVerified=false;renderStore();" style="margin-top:8px;margin-left:8px;padding:8px 16px;background:none;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--muted);cursor:pointer;">로그아웃</button>
+    </div>`;
+}
+
+function checkPw(){
+  const val=document.getElementById('pw-input').value;
+  if (val===ADMIN_PW){
+    pwVerified=true;
+    renderStore();
+  } else {
+    document.getElementById('pw-error').style.display='block';
+  }
+}
+
+// ── 시스템 관리자 ──────────────────────────────────────────
+function renderSysAdmin(){
+  return `
+    <div class="alert-section" style="max-width:500px;">
+      <h3>🔐 시스템 관리자</h3>
+      <p class="alert-desc">이 시스템의 관리 책임자 정보입니다.</p>
+      <div style="margin-top:1.25rem;display:flex;flex-direction:column;gap:12px;">
+        <div style="background:var(--bg);border-radius:var(--r);padding:1rem 1.25rem;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">관리자</div>
+          <div style="font-size:15px;font-weight:600;color:var(--text);">이언주</div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--r);padding:1rem 1.25rem;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">연락처 (이메일)</div>
+          <div style="font-size:14px;font-weight:500;color:var(--blue);">
+            <a href="mailto:eonju51@momos.co.kr" style="color:var(--blue);text-decoration:none;">eonju51@momos.co.kr</a>
           </div>
         </div>
-        <div class="filter-panel ${activeFilter?'open':''}" id="filter-panel">
-          <div class="filter-panel-title">
-            <span id="filter-panel-title"></span>
-            <button class="filter-close" onclick="toggleFilter(null)">✕ 닫기</button>
-          </div>
-          <div class="filter-list" id="filter-list"></div>
+        <div style="background:var(--bg);border-radius:var(--r);padding:1rem 1.25rem;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">시스템</div>
+          <div style="font-size:13px;color:var(--text);">바리스타팀 장비 부품 교체 시스템</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">momosretail.github.io/equipmentmanagement</div>
         </div>
-        <div class="tabs">
-          ${STORES.map(s=>`<button class="tab ${s===activeStore?'active':''}" onclick="selectStore('${s}')">${s}</button>`).join('')}
-          <button class="tab admin-tab ${'관리자'===activeStore?'active':''}" onclick="selectStore('관리자')">관리자</button>
-        </div>
-        <div id="store-content"></div>
-      `;
+      </div>
+    </div>`;
+}
 
-      // 필터 패널 내용
-      if (activeFilter) renderFilterPanel(items[activeFilter]);
-      renderStore();
-    }
+function renderDevice(dev,parts){
+  const badges=parts.map(p=>{
+    const st=status(p.next);
+    const dayStr=st.days!==null?` (${st.days}일)`:'';
+    return miniBadge(st,p.part+dayStr);
+  }).join('');
+  const rows=parts.map(p=>{
+    const st=status(p.next);
+    return `<tr>
+      <td><span class="part-name">${p.part}</span><span class="part-sub">${p.interval}개월 주기</span></td>
+      <td><span class="part-interval">${p.interval}개월</span></td>
+      <td style="font-family:var(--sans);font-size:13px;">${p.last?fmt(p.last):'<span class="date-empty">미입력</span>'}</td>
+      <td style="font-family:var(--sans);font-size:13px;">${p.next?fmt(p.next):'<span class="date-empty">미입력</span>'}</td>
+      <td>${ddayBadge(st)}</td>
+      <td>${p.note?`<span class="note-text">${p.note}`:''}</span></td>
+      <td style="white-space:nowrap;">
+        <button class="edit-btn" onclick="openModal('${activeStore}','${esc(dev)}','${esc(p.part)}',${p.interval},'${p.last||''}','${p.next||''}')">수정</button>
+        <button class="hist-btn" onclick="openHistModal('${activeStore}','${esc(dev)}','${esc(p.part)}')">이력</button>
+      </td>
+    </tr>`;
+  }).join('');
+  return `
+    <div class="device-block">
+      <div class="device-header">
+        <span class="device-name">${dev}</span>
+        <div class="device-status">${badges}</div>
+      </div>
+      <table class="parts-table">
+        <thead><tr>
+          <th>부품명</th><th>주기</th><th>마지막 교체일자</th><th>다음 교체일자</th><th>교체까지</th><th>비고</th><th></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
 
-    function toggleFilter(cls) {
-      activeFilter = (activeFilter === cls) ? null : cls;
-      render();
-    }
+function renderAdmin(){
+  const admins=loadAdmins();
+  const today=todayISO();
+  const alerts=[];
+  STORES.forEach(store=>Object.values(allData[store]||{}).forEach(cat=>
+    Object.values(cat).forEach(dev=>dev.forEach(p=>{
+      const d=diffDays(today,p.next);
+      if (d!==null&&d>=0&&d<=30) alerts.push({store,part:p.part,next:p.next,dday:d});
+    }))
+  ));
 
-    function renderFilterPanel(items) {
-      const labels = {danger:'🔴 위험 (D-7 이내)', warning:'🟠 주의 (D-30 이내)', ok:'🟢 정상', none:'🟡 날짜 미입력'};
-      document.getElementById('filter-panel-title').textContent = `${labels[activeFilter]} — ${items.length}건`;
-      if (!items.length) {
-        document.getElementById('filter-list').innerHTML = '<div style="font-size:12px;color:var(--muted);">해당 항목 없음</div>';
-        return;
+  const cards=STORES.map(s=>{
+    const a=admins[s]||{};
+    const sc=STORE_COLORS[s]||{bg:'#1a1916',fg:'#fff'};
+    return `
+      <div class="admin-card" data-store="${s}">
+        <div class="store-badge" style="background:${sc.bg};color:${sc.fg};">${s}</div>
+        <div class="admin-field"><label>담당자 이름</label><input type="text" class="a-name" placeholder="이름 입력" value="${a.name||''}"></div>
+        <div class="admin-field"><label>연락처</label><input type="text" class="a-phone" placeholder="010-0000-0000" value="${a.phone||''}"></div>
+        <div class="admin-field"><label>이메일</label><input type="email" class="a-email" placeholder="email@example.com" value="${a.email||''}"></div>
+        <button class="admin-save-btn" onclick="saveAdmin('${s}')">저장</button>
+      </div>`;
+  }).join('');
+
+  const alertItems=alerts.length===0
+    ?'<p style="font-size:12px;color:var(--muted);padding:1rem 0;">D-30 이내 교체 대상 없음</p>'
+    :alerts.map(a=>`
+        <div class="alert-item">
+          <span class="alert-store" style="${storeBadgeStyle(a.store)}">${a.store}</span>
+          <span style="font-weight:500;flex:1;min-width:120px;">${a.part}</span>
+          <span style="font-size:11px;color:var(--muted);">${fmt(a.next)}</span>
+          <span class="dday-badge" style="background:#FFF3E0;color:#EF6C00;font-size:12px;">🟠 D-${a.dday}</span>
+        </div>`).join('');
+
+  return `
+    <div class="admin-grid">${cards}</div>
+    <div class="alert-section">
+      <h3>교체 알림 발송</h3>
+      <p class="alert-desc">D-30 이내 교체 대상 부품을 매장 담당자 이메일로 발송합니다.</p>
+      <div>${alertItems}</div>
+      ${alerts.length>0?`<button class="alert-btn" id="send-btn" onclick="sendAlerts()">메일 발송 (${alerts.length}건)</button>`:''}
+    </div>`;
+}
+
+function saveAdmin(store){
+  const card=document.querySelector(`.admin-card[data-store="${store}"]`);
+  const admins=loadAdmins();
+  admins[store]={
+    name:  card.querySelector('.a-name').value.trim(),
+    phone: card.querySelector('.a-phone').value.trim(),
+    email: card.querySelector('.a-email').value.trim(),
+  };
+  saveAdmins(admins);
+  showToast(`${store} 담당자 정보 저장 완료`);
+}
+
+async function sendAlerts(){
+  const admins=loadAdmins();
+  const btn=document.getElementById('send-btn');
+  if (btn){btn.disabled=true;btn.textContent='발송 중...';}
+  const byStore={};
+  STORES.forEach(store=>Object.values(allData[store]||{}).forEach(cat=>
+    Object.values(cat).forEach(dev=>dev.forEach(p=>{
+      const d=diffDays(todayISO(),p.next);
+      if (d!==null&&d>=0&&d<=30){
+        if (!byStore[store]) byStore[store]=[];
+        byStore[store].push({part:p.part,next:p.next,dday:d});
       }
-      document.getElementById('filter-list').innerHTML = items.map(it => `
-        <div class="filter-item">
-          <span class="filter-store-badge" style="${storeBadgeStyle(it.store)}">${it.store}</span>
-          <span style="flex:1;font-weight:500;">${it.part}</span>
-          <span class="filter-device">${it.dev}</span>
-          ${ddayBadge(it.st)}
+    }))
+  ));
+  let sent=0,failed=0;
+  for (const [store,parts] of Object.entries(byStore)){
+    const admin=admins[store];
+    if (!admin?.email){failed++;continue;}
+    const partLines=parts.map(p=>
+      `교체해야 할 부품명 : ${p.part}\n만료 예정일 : ${fmt(p.next)}\n남은 기간 : D-${p.dday}`
+    ).join('\n\n');
+    try{
+      const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
+        action:'sendMail',to:admin.email,
+        subject:'[확인 요청] 장비 부품 교체 주기 경과 예정 안내',
+        body:`안녕하세요, 매장에서 사용 중인 장비의 부품 교체 시기가 도래하여 확인 요청드립니다.\n\n${partLines}\n\n감사합니다.`
+      })});
+      const json=await res.json();
+      if (json.success) sent++; else failed++;
+    }catch(e){failed++;}
+  }
+  showToast(`발송 완료 ${sent}건${failed>0?' / 실패 '+failed+'건':''}`);
+  if (btn){btn.disabled=false;btn.textContent='메일 발송';}
+}
+
+function selectStore(s){
+  activeStore=s;
+  const titles={
+    '대시보드':'대시보드',
+    '본점':'본점','영도':'영도','마린시티':'마린시티','도모헌':'도모헌',
+    '매장별담당자':'매장별 담당자','알림발송':'알림 발송','시스템관리자':'시스템 관리자'
+  };
+  document.getElementById('topbar-title').textContent=titles[s]||s;
+  activeFilter=null;
+  updateSidebarActive();
+  if (allData) render();
+  closeSidebar();
+}
+
+function updateSidebarActive(){
+  document.querySelectorAll('.nav-store,.nav-item').forEach(el=>{
+    el.classList.toggle('active',el.dataset.store===activeStore);
+  });
+}
+
+function openModal(store,dev,part,interval,last,next){
+  editTarget={store,dev,part,interval};
+  document.getElementById('m-title').textContent=part;
+  document.getElementById('m-sub').textContent=`${store} · ${dev} · ${interval}개월 주기`;
+  document.getElementById('m-last').value=last||'';
+  document.getElementById('m-next').value=next||'';
+  document.getElementById('m-manager').value='';
+  document.getElementById('m-memo').value='';
+  document.getElementById('m-save').disabled=false;
+  document.getElementById('m-saving').style.display='none';
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');editTarget=null;}
+function autoCalc(){
+  const last=document.getElementById('m-last').value;
+  if (!last||!editTarget) return;
+  document.getElementById('m-next').value=addDays(last,editTarget.interval*30);
+}
+async function saveModal(){
+  if (!editTarget) return;
+  const last=document.getElementById('m-last').value;
+  const next=document.getElementById('m-next').value;
+  const manager=document.getElementById('m-manager').value.trim();
+  const memo=document.getElementById('m-memo').value.trim();
+  document.getElementById('m-save').disabled=true;
+  document.getElementById('m-saving').style.display='block';
+  try{
+    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({
+      action:'updateRow',store:editTarget.store,device:editTarget.dev,
+      part:editTarget.part,last,next,manager,memo
+    })});
+    const json=await res.json();
+    if (!json.success) throw new Error(json.error);
+    Object.values(allData[editTarget.store]||{}).forEach(cat=>{
+      if (cat[editTarget.dev]) cat[editTarget.dev].forEach(p=>{
+        if (p.part===editTarget.part){p.last=last;p.next=next;}
+      });
+    });
+    closeModal();render();showToast('저장 완료 ✓');
+  }catch(e){
+    document.getElementById('m-save').disabled=false;
+    document.getElementById('m-saving').style.display='none';
+    showToast('저장 실패: '+e.message);
+  }
+}
+
+async function openHistModal(store,dev,part){
+  document.getElementById('h-title').textContent=part;
+  document.getElementById('h-sub').textContent=`${store} · ${dev}`;
+  document.getElementById('h-loading').style.display='block';
+  document.getElementById('h-list').style.display='none';
+  document.getElementById('hist-modal').classList.add('open');
+  try{
+    const url=`${APPS_SCRIPT_URL}?action=getHistory&store=${encodeURIComponent(store)}&device=${encodeURIComponent(dev)}&part=${encodeURIComponent(part)}`;
+    const res=await fetch(url);
+    const json=await res.json();
+    const list=document.getElementById('h-list');
+    if (!json.success||!json.history.length){
+      list.innerHTML='<div class="hist-empty">아직 교체 이력이 없습니다.</div>';
+    }else{
+      list.innerHTML=json.history.map(h=>`
+        <div class="hist-item">
+          <div class="hist-date">${fmt(h.date)}</div>
+          ${h.manager?`<div class="hist-manager">담당자: ${h.manager}</div>`:''}
+          ${h.memo?`<div class="hist-memo">${h.memo}</div>`:''}
         </div>`).join('');
     }
+    document.getElementById('h-loading').style.display='none';
+    list.style.display='block';
+  }catch(e){
+    document.getElementById('h-list').innerHTML=`<div class="hist-empty">불러오기 실패: ${e.message}</div>`;
+    document.getElementById('h-loading').style.display='none';
+    document.getElementById('h-list').style.display='block';
+  }
+}
+function closeHistModal(){document.getElementById('hist-modal').classList.remove('open');}
 
-    // ── 매장 탭 렌더 ──────────────────────────────────────────
-    function renderStore() {
-      const el = document.getElementById('store-content');
-      if (activeStore === '관리자') { el.innerHTML = renderAdmin(); return; }
-      const sd = allData[activeStore]||{};
-      if (!Object.keys(sd).length) { el.innerHTML='<div class="state-box"><p>데이터가 없습니다.</p></div>'; return; }
-      el.innerHTML = Object.entries(sd).map(([cat, devices]) => `
-        <div class="cat-block">
-          <div class="cat-title">${cat}</div>
-          ${Object.entries(devices).map(([dev, parts]) => renderDevice(dev, parts)).join('')}
-        </div>
-      `).join('');
-    }
+const esc=s=>String(s).replace(/'/g,"\\'");
+function showLoading(){document.getElementById('app').innerHTML='<div class="state-box"><div class="spinner"></div><p>불러오는 중...</p></div>';}
+function showError(m){document.getElementById('app').innerHTML=`<div class="state-box"><p>로딩 실패<br><small>${m}</small></p></div>`;}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
 
-    function renderDevice(dev, parts) {
-      const badges = parts.map(p => {
-        const st = status(p.next);
-        const dayStr = st.days !== null ? ` (${st.days}일)` : '';
-        return miniBadge(st, p.part + dayStr);
-      }).join('');
-
-      const rows = parts.map(p => {
-        const st = status(p.next);
-        return `<tr>
-          <td><span class="part-name">${p.part}</span><span class="part-sub">${p.interval}개월 주기</span></td>
-          <td><span class="part-interval" style="color:var(--muted);">${p.interval}개월</span></td>
-          <td style="font-family:var(--sans);font-size:13px;">${p.last ? fmt(p.last) : '<span class="date-empty">미입력</span>'}</td>
-          <td style="font-family:var(--sans);font-size:13px;">${p.next ? fmt(p.next) : '<span class="date-empty">미입력</span>'}</td>
-          <td>${ddayBadge(st)}</td>
-          <td>${p.note?`<span class="note-text">${p.note}</span>`:''}</td>
-          <td style="white-space:nowrap;">
-            <button class="edit-btn" onclick="openModal('${activeStore}','${esc(dev)}','${esc(p.part)}',${p.interval},'${p.last||''}','${p.next||''}')">수정</button>
-            <button class="hist-btn" onclick="openHistModal('${activeStore}','${esc(dev)}','${esc(p.part)}')">이력</button>
-          </td>
-        </tr>`;
-      }).join('');
-
-      return `
-        <div class="device-block">
-          <div class="device-header">
-            <span class="device-name">${dev}</span>
-            <div class="device-status">${badges}</div>
-          </div>
-          <table class="parts-table">
-            <thead><tr>
-              <th>부품명</th><th>주기</th><th>마지막 교체일자</th><th>다음 교체일자</th><th>교체까지</th><th>비고</th><th></th>
-            </tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>`;
-    }
-
-    // ── 관리자 탭 ─────────────────────────────────────────────
-    function renderAdmin() {
-      const admins = loadAdmins();
-      const today  = todayISO();
-      const alerts = [];
-      STORES.forEach(store => Object.values(allData[store]||{}).forEach(cat =>
-        Object.values(cat).forEach(dev => dev.forEach(p => {
-          const d = diffDays(today, p.next);
-          if (d!==null && d>=0 && d<=30) alerts.push({store, part:p.part, next:p.next, dday:d});
-        }))
-      ));
-
-      const cards = STORES.map(s => {
-        const a = admins[s]||{};
-        return `
-          <div class="admin-card" data-store="${s}">
-            <div class="store-badge">${s}</div>
-            <div class="admin-field"><label>담당자 이름</label><input type="text" class="a-name" placeholder="이름 입력" value="${a.name||''}"></div>
-            <div class="admin-field"><label>연락처</label><input type="text" class="a-phone" placeholder="010-0000-0000" value="${a.phone||''}"></div>
-            <div class="admin-field"><label>이메일</label><input type="email" class="a-email" placeholder="email@example.com" value="${a.email||''}"></div>
-            <button class="admin-save-btn" onclick="saveAdmin('${s}')">저장</button>
-          </div>`;
-      }).join('');
-
-      const alertItems = alerts.length===0
-        ? '<p style="font-size:12px;color:var(--muted);padding:1rem 0;">D-30 이내 교체 대상 없음</p>'
-        : alerts.map(a=>`
-            <div class="alert-item">
-              <span class="alert-store">${a.store}</span>
-              <span style="font-weight:500;flex:1;min-width:120px;">${a.part}</span>
-              <span style="font-size:11px;color:var(--muted);">${fmt(a.next)}</span>
-              <span class="dday-badge" style="background:#FFF3E0;color:#EF6C00;font-size:12px;">🟠 D-${a.dday}</span>
-            </div>`).join('');
-
-      return `
-        <div class="admin-grid">${cards}</div>
-        <div class="alert-section">
-          <h3>교체 알림 발송</h3>
-          <p class="alert-desc">D-30 이내 교체 대상 부품을 매장 담당자 이메일로 발송합니다.</p>
-          <div>${alertItems}</div>
-          ${alerts.length>0?`<button class="alert-btn" id="send-btn" onclick="sendAlerts()">메일 발송 (${alerts.length}건)</button>`:''}
-        </div>`;
-    }
-
-    function saveAdmin(store) {
-      const card = document.querySelector(`.admin-card[data-store="${store}"]`);
-      const admins = loadAdmins();
-      admins[store] = {
-        name:  card.querySelector('.a-name').value.trim(),
-        phone: card.querySelector('.a-phone').value.trim(),
-        email: card.querySelector('.a-email').value.trim(),
-      };
-      saveAdmins(admins);
-      showToast(`${store} 담당자 정보 저장 완료`);
-    }
-
-    async function sendAlerts() {
-      const admins = loadAdmins();
-      const btn = document.getElementById('send-btn');
-      if (btn) { btn.disabled=true; btn.textContent='발송 중...'; }
-      const byStore = {};
-      STORES.forEach(store => Object.values(allData[store]||{}).forEach(cat =>
-        Object.values(cat).forEach(dev => dev.forEach(p => {
-          const d = diffDays(todayISO(), p.next);
-          if (d!==null && d>=0 && d<=30) {
-            if (!byStore[store]) byStore[store]=[];
-            byStore[store].push({part:p.part, next:p.next, dday:d});
-          }
-        }))
-      ));
-      let sent=0, failed=0;
-      for (const [store, parts] of Object.entries(byStore)) {
-        const admin = admins[store];
-        if (!admin?.email) { failed++; continue; }
-        const partLines = parts.map(p =>
-          `교체해야 할 부품명 : ${p.part}\n만료 예정일 : ${fmt(p.next)}\n남은 기간 : D-${p.dday}`
-        ).join('\n\n');
-        try {
-          const res  = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
-            action:'sendMail', to:admin.email,
-            subject:'[확인 요청] 장비 부품 교체 주기 경과 예정 안내',
-            body:`안녕하세요, 매장에서 사용 중인 장비의 부품 교체 시기가 도래하여 확인 요청드립니다.\n\n${partLines}\n\n감사합니다.`
-          })});
-          const json = await res.json();
-          if (json.success) sent++; else failed++;
-        } catch(e) { failed++; }
-      }
-      showToast(`발송 완료 ${sent}건${failed>0?' / 실패 '+failed+'건':''}`);
-      if (btn) { btn.disabled=false; btn.textContent='메일 발송'; }
-    }
-
-    // ── 탭 전환 ───────────────────────────────────────────────
-    function selectStore(s) {
-      activeStore = s;
-      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent.trim()===s));
-      renderStore();
-    }
-
-    // ── 수정 모달 ─────────────────────────────────────────────
-    function openModal(store, dev, part, interval, last, next) {
-      editTarget = {store, dev, part, interval};
-      document.getElementById('m-title').textContent = part;
-      document.getElementById('m-sub').textContent   = `${store} · ${dev} · ${interval}개월 주기`;
-      document.getElementById('m-last').value        = last||'';
-      document.getElementById('m-next').value        = next||'';
-      document.getElementById('m-manager').value     = '';
-      document.getElementById('m-memo').value        = '';
-      document.getElementById('m-save').disabled     = false;
-      document.getElementById('m-saving').style.display = 'none';
-      document.getElementById('modal').classList.add('open');
-    }
-    function closeModal() { document.getElementById('modal').classList.remove('open'); editTarget=null; }
-    function autoCalc() {
-      const last = document.getElementById('m-last').value;
-      if (!last||!editTarget) return;
-      document.getElementById('m-next').value = addDays(last, editTarget.interval*30);
-    }
-    async function saveModal() {
-      if (!editTarget) return;
-      const last    = document.getElementById('m-last').value;
-      const next    = document.getElementById('m-next').value;
-      const manager = document.getElementById('m-manager').value.trim();
-      const memo    = document.getElementById('m-memo').value.trim();
-      document.getElementById('m-save').disabled        = true;
-      document.getElementById('m-saving').style.display = 'block';
-      try {
-        const res  = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({
-          action:'updateRow', store:editTarget.store, device:editTarget.dev,
-          part:editTarget.part, last, next, manager, memo
-        })});
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error);
-        Object.values(allData[editTarget.store]||{}).forEach(cat => {
-          if (cat[editTarget.dev]) cat[editTarget.dev].forEach(p => {
-            if (p.part===editTarget.part) { p.last=last; p.next=next; }
-          });
-        });
-        closeModal(); render(); showToast('저장 완료 ✓');
-      } catch(e) {
-        document.getElementById('m-save').disabled        = false;
-        document.getElementById('m-saving').style.display = 'none';
-        showToast('저장 실패: '+e.message);
-      }
-    }
-
-    // ── 이력 모달 ─────────────────────────────────────────────
-    async function openHistModal(store, dev, part) {
-      document.getElementById('h-title').textContent = part;
-      document.getElementById('h-sub').textContent   = `${store} · ${dev}`;
-      document.getElementById('h-loading').style.display = 'block';
-      document.getElementById('h-list').style.display    = 'none';
-      document.getElementById('hist-modal').classList.add('open');
-      try {
-        const url  = `${APPS_SCRIPT_URL}?action=getHistory&store=${encodeURIComponent(store)}&device=${encodeURIComponent(dev)}&part=${encodeURIComponent(part)}`;
-        const res  = await fetch(url);
-        const json = await res.json();
-        const list = document.getElementById('h-list');
-        if (!json.success||!json.history.length) {
-          list.innerHTML = '<div class="hist-empty">아직 교체 이력이 없습니다.</div>';
-        } else {
-          list.innerHTML = json.history.map(h=>`
-            <div class="hist-item">
-              <div class="hist-date">${fmt(h.date)}</div>
-              ${h.manager?`<div class="hist-manager">담당자: ${h.manager}</div>`:''}
-              ${h.memo   ?`<div class="hist-memo">${h.memo}</div>`:''}
-            </div>`).join('');
-        }
-        document.getElementById('h-loading').style.display = 'none';
-        list.style.display = 'block';
-      } catch(e) {
-        document.getElementById('h-list').innerHTML = `<div class="hist-empty">불러오기 실패: ${e.message}</div>`;
-        document.getElementById('h-loading').style.display = 'none';
-        document.getElementById('h-list').style.display    = 'block';
-      }
-    }
-    function closeHistModal() { document.getElementById('hist-modal').classList.remove('open'); }
-
-    // ── 유틸 ──────────────────────────────────────────────────
-    const esc = s => String(s).replace(/'/g,"\\'");
-    function showLoading() { document.getElementById('app').innerHTML='<div class="state-box"><div class="spinner"></div><p>불러오는 중...</p></div>'; }
-    function showError(m)  { document.getElementById('app').innerHTML=`<div class="state-box"><p>로딩 실패<br><small>${m}</small></p></div>`; }
-    function showToast(msg) {
-      const t=document.getElementById('toast');
-      t.textContent=msg; t.classList.add('show');
-      setTimeout(()=>t.classList.remove('show'),2800);
-    }
-
-    document.getElementById('modal').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(); });
-    document.getElementById('hist-modal').addEventListener('click', e=>{ if(e.target===e.currentTarget) closeHistModal(); });
-    loadData();
-    </script>
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.getElementById('hist-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeHistModal();});
+loadData();
+</script>
 </body>
 </html>
