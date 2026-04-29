@@ -77,7 +77,15 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 .mini-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;}
 
 /* ── Table ── */
-.parts-table{width:100%;border-collapse:collapse;}
+.parts-table{width:100%;border-collapse:collapse;table-layout:fixed;}
+.parts-table th:nth-child(1){width:18%;}
+.parts-table th:nth-child(2){width:8%;}
+.parts-table th:nth-child(3){width:12%;}
+.parts-table th:nth-child(4){width:12%;}
+.parts-table th:nth-child(5){width:16%;}
+.parts-table th:nth-child(6){width:22%;}
+.parts-table th:nth-child(7){width:12%;}
+.parts-table td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .parts-table th{font-size:13px;color:var(--muted);font-weight:500;padding:7px 1rem;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2);}
 .parts-table td{font-size:13px;padding:9px 1rem;border-bottom:1px solid var(--border);vertical-align:middle;}
 .parts-table tr:last-child td{border-bottom:none;}
