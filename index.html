@@ -9,7 +9,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --bg:#ffffff; --surface:#fff; --surface2:#f7f7f5;
+  --bg:#f4f2ee; --surface:#fff; --surface2:#f9f8f5;
   --border:#e0e0dc; --border2:#ccc; --text:#1a1916; --muted:#7a7770;
   --accent:#1a1916; --blue:#909288; --blue-bg:#f0f0ee;
   --sidebar-w:200px; --r:8px;
@@ -107,6 +107,7 @@ body{font-family:var(–sans);background:var(–bg);color:var(–text);min-heigh
 .hist-btn{font-size:11px;color:var(–blue);border:1px solid var(–blue-bg);border-radius:5px;padding:3px 8px;cursor:pointer;background:var(–blue-bg);}
 .hist-btn:hover{background:#d0e0f5;}
 .note-text{font-size:11px;color:var(–muted);font-style:italic;}
+.mobile-parts{display:none;}
 
 /* ── Admin ── */
 .admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:1.5rem;}
@@ -184,6 +185,9 @@ body{font-family:var(–sans);background:var(–bg);color:var(–text);min-heigh
 .device-header{flex-direction:column;align-items:flex-start;}
 .admin-grid{grid-template-columns:1fr;}
 .topbar-title{font-size:15px;}
+/* 모바일 카드형 테이블 */
+.parts-table{display:none;}
+.mobile-parts{display:block;}
 }
 </style>
 
@@ -793,6 +797,23 @@ function renderDevice(dev,parts){
       </td>
     </tr>`;
   }).join('');
+  // 모바일 카드형
+  const mobileCards = parts.map(p => {
+    const st = status(p.next);
+    return `<div style="padding:10px 12px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:13px;font-weight:600;">${p.part}</span>
+        ${ddayBadge(st)}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${p.interval}개월 주기${p.next?' · 다음 교체: '+fmt(p.next):''}</div>
+      ${p.note?`<div style="font-size:11px;color:var(--muted);font-style:italic;margin-bottom:6px;">${p.note}</div>`:''}
+      <div style="display:flex;gap:6px;">
+        <button class="edit-btn" onclick="openModal('${activeStore}','${esc(dev)}','${esc(p.part)}',${p.interval},'${p.last||''}','${p.next||''}')">수정</button>
+        <button class="hist-btn" onclick="openHistModal('${activeStore}','${esc(dev)}','${esc(p.part)}')">이력</button>
+      </div>
+    </div>`;
+  }).join('');
+
   return `
     <div class="device-block">
       <div class="device-header">
@@ -805,6 +826,7 @@ function renderDevice(dev,parts){
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
+      <div class="mobile-parts">${mobileCards}</div>
     </div>`;
 }
 
