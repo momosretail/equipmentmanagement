@@ -11,44 +11,34 @@
 :root{
   --bg:#ffffff; --surface:#fff; --surface2:#f7f7f5;
   --border:#e0e0dc; --border2:#ccc; --text:#1a1916; --muted:#7a7770;
-  --accent:#909288; --blue:#909288; --blue-bg:#f0f0ee;
+  --accent:#1a1916; --blue:#909288; --blue-bg:#f0f0ee;
   --sidebar-w:200px; --r:8px;
   --sans:'Noto Sans KR',sans-serif; --mono:'DM Mono',monospace;
 }
 
 /* ── Login ── */
-.login-wrap{display:none;position:fixed;inset:0;background:#d8d3c2;z-index:999;align-items:center;justify-content:center;flex-direction:column;}
-.login-wrap.show{display:flex;}
-.login-box{width:380px;max-width:92vw;display:flex;flex-direction:column;align-items:center;gap:0;}
 .login-logo{width:120px;height:120px;object-fit:contain;margin-bottom:1.5rem;}
-.login-logo-text{font-size:28px;font-weight:700;color:#fff;letter-spacing:.15em;text-align:center;line-height:1.2;margin-bottom:.5rem;}
-.login-sub{font-size:11px;color:rgba(255,255,255,.6);letter-spacing:.12em;margin-bottom:2.5rem;text-align:center;}
-.login-field{width:100%;margin-bottom:10px;}
-.login-field input{width:100%;padding:13px 16px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:6px;font-size:13px;color:#fff;font-family:var(–sans);outline:none;letter-spacing:.05em;}
 .login-field input::placeholder{color:rgba(255,255,255,.5);letter-spacing:.08em;}
 .login-field input:focus{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.6);}
-.login-btn{width:100%;padding:13px;background:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;color:#909288;cursor:pointer;letter-spacing:.1em;margin-top:4px;}
-.login-btn:hover{background:#f5f5f5;}
-.login-error{font-size:12px;color:#ffdddd;text-align:center;margin-top:8px;display:none;}
 
 body{font-family:var(–sans);background:var(–bg);color:var(–text);min-height:100vh;display:flex;}
 
 /* ── Sidebar ── */
-.sidebar{width:var(–sidebar-w);min-height:100vh;background:#909288;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:100;}
+.sidebar{width:var(–sidebar-w);min-height:100vh;background:#1a1916;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:100;}
 .sidebar-logo{padding:1.4rem 1.2rem 1rem;border-bottom:1px solid #7a7870;}
-.sidebar-logo .brand{font-size:13px;font-weight:700;color:#fff;letter-spacing:.05em;line-height:1.4;}
-.sidebar-logo .sub{font-size:12px;color:#888;margin-top:2px;}
-.sidebar-section{padding:.75rem 1rem .25rem;font-size:12px;color:#666;letter-spacing:.08em;text-transform:uppercase;}
-.nav-item{display:flex;align-items:center;gap:9px;padding:.6rem 1.2rem;font-size:13px;color:#aaa;cursor:pointer;transition:all .15s;border-left:3px solid transparent;}
+.sidebar-logo .brand{font-size:13px;font-weight:700;color:#ffffff;letter-spacing:.05em;line-height:1.4;}
+.sidebar-logo .sub{font-size:12px;color:#ddd;margin-top:2px;}
+.sidebar-section{padding:.75rem 1rem .25rem;font-size:12px;color:#ccc;letter-spacing:.08em;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:.6rem 1.2rem;font-size:13px;color:#e8e6e2;cursor:pointer;transition:all .15s;border-left:3px solid transparent;}
 .nav-item:hover{background:#ffffff12;color:#fff;}
 .nav-item.active{background:#ffffff18;color:#fff;border-left-color:#fff;}
 .nav-item .nav-icon{font-size:14px;width:18px;text-align:center;}
-.nav-store{display:flex;align-items:center;gap:8px;padding:.5rem 1.2rem .5rem 1.5rem;font-size:13px;color:#aaa;cursor:pointer;transition:all .15s;border-left:3px solid transparent;}
+.nav-store{display:flex;align-items:center;gap:8px;padding:.5rem 1.2rem .5rem 1.5rem;font-size:13px;color:#e8e6e2;cursor:pointer;transition:all .15s;border-left:3px solid transparent;}
 .nav-store:hover{background:#ffffff12;color:#fff;}
 .nav-store.active{color:#fff;border-left-color:#fff;}
 .nav-store .store-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .sidebar-bottom{margin-top:auto;padding:1rem 1.2rem;border-top:1px solid #7a7870;}
-.date-small{font-size:10px;color:#666;font-family:var(–mono);}
+.date-small{font-size:10px;color:#ccc;font-family:var(–mono);}
 
 /* ── Main ── */
 .main{margin-left:var(–sidebar-w);flex:1;min-height:100vh;display:flex;flex-direction:column;}
@@ -56,7 +46,7 @@ body{font-family:var(–sans);background:var(–bg);color:var(–text);min-heigh
 .topbar-title{font-size:16px;font-weight:600;color:var(–text);}
 .topbar-right{display:flex;gap:8px;align-items:center;}
 .date-chip{font-size:11px;color:var(–muted);background:var(–bg);border:1px solid var(–border);border-radius:20px;padding:4px 12px;font-family:var(–mono);}
-.refresh-btn{font-size:12px;background:#909288;color:#fff;border:none;border-radius:20px;padding:6px 14px;cursor:pointer;}
+.refresh-btn{font-size:12px;background:#1a1916;color:#fff;border:none;border-radius:20px;padding:6px 14px;cursor:pointer;}
 
 .content{padding:1.5rem 1.75rem 4rem;flex:1;}
 
@@ -142,7 +132,7 @@ body{font-family:var(–sans);background:var(–bg);color:var(–text);min-heigh
 @keyframes spin{to{transform:rotate(360deg);}}
 
 /* ── Modal ── */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:200;align-items:center;justify-content:center;}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;}
 .overlay.open{display:flex;}
 .modal{background:var(–surface);border-radius:12px;border:1px solid var(–border);padding:1.5rem;width:380px;max-width:94vw;max-height:90vh;overflow-y:auto;}
 .modal h3{font-size:15px;font-weight:600;margin-bottom:3px;}
@@ -169,7 +159,7 @@ body{font-family:var(–sans);background:var(–bg);color:var(–text);min-heigh
 
 /* ── Mobile ── */
 .hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px;font-size:20px;color:var(–text);}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99;}
 .sidebar-overlay.open{display:block;}
 
 @media(max-width:768px){
@@ -182,15 +172,18 @@ body{font-family:var(–sans);background:var(–bg);color:var(–text);min-heigh
 .parts-table th:nth-child(3),.parts-table td:nth-child(3),
 .parts-table th:nth-child(4),.parts-table td:nth-child(4),
 .parts-table th:nth-child(6),.parts-table td:nth-child(6){display:none;}
-.content{padding:1rem 1rem 4rem;}
+.content{padding:1rem .75rem 4rem;}
 .topbar{padding:.75rem 1rem;}
 .s-num{font-size:26px;}
 .s-label{font-size:11px;}
 .parts-table th{font-size:12px;}
 .parts-table td{font-size:12px;}
-.dday-badge{font-size:12px;}
+.dday-badge{font-size:11px;}
 .device-name{font-size:13px !important;}
 .filter-item{font-size:12px;}
+.device-header{flex-direction:column;align-items:flex-start;}
+.admin-grid{grid-template-columns:1fr;}
+.topbar-title{font-size:15px;}
 }
 </style>
 
@@ -212,7 +205,7 @@ body{font-family:var(–sans);background:var(–bg);color:var(–text);min-heigh
       style="width:100%;padding:12px 16px;border:1px solid #c0bdb0;border-radius:8px;font-size:14px;background:rgba(255,255,255,0.5);color:#1a1916;outline:none;"
       onkeydown="if(event.key==='Enter')doLogin()">
     <button onclick="doLogin()"
-      style="width:100%;padding:12px;background:#909288;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-top:4px;">
+      style="width:100%;padding:12px;background:#1a1916;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-top:4px;">
       로그인
     </button>
     <div id="login-error" style="font-size:12px;color:#c62828;text-align:center;display:none;">아이디 또는 비밀번호가 올바르지 않습니다.</div>
@@ -606,7 +599,7 @@ function renderDashboard(){
       </div>
     </div>
     ${filterHtml}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:1rem;">
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:1rem;">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;">
         <div style="font-size:15px;font-weight:600;margin-bottom:.25rem;">📋 매장별 현황</div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:.75rem;">전체 ${total}개 부품</div>
@@ -729,7 +722,7 @@ function renderSysAdmin(){
         <input type="text" id="new-uname" placeholder="이름" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);">
         <input type="email" id="new-uemail" placeholder="이메일" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);">
       </div>
-      <button onclick="addUser()" style="padding:7px 20px;background:#909288;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">등록</button>
+      <button onclick="addUser()" style="padding:7px 20px;background:#1a1916;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">등록</button>
       <div id="user-msg" style="font-size:11px;margin-top:6px;display:none;"></div>
     </div>` : '<p style="font-size:12px;color:var(--muted);margin-top:1rem;">담당자 등록은 관리자만 가능합니다.</p>';
 
