@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>바리스타팀 매장사업부 QA 장비 관리 시스템</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://script.google.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -300,7 +297,7 @@ body{font-family:var(--sans);background:#f4f2ee;color:var(--text);min-height:100
     </div>
     <div class="topbar-right">
       <div class="date-chip" id="date-chip"></div>
-      <button class="refresh-btn" onclick="loadData(true)">↻ 새로고침</button>
+      <button class="refresh-btn" onclick="loadData()">↻ 새로고침</button>
     </div>
   </div>
 
@@ -348,16 +345,6 @@ body{font-family:var(--sans);background:#f4f2ee;color:var(--text);min-height:100
 
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec';
-const DATA_CACHE_KEY = 'eq_data_cache_v1';
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10분
-
-function _doFetch() {
-  return fetch(`${APPS_SCRIPT_URL}?action=getData`)
-    .then(r => r.json())
-    .catch(e => ({ success: false, error: e.message }));
-}
-// 페이지 로드 즉시 미리 요청 시작 (로그인 전부터)
-let _pendingFetch = _doFetch();
 const STORES = ['본점','영도','마린시티','도모헌'];
 const REPAIR_CATEGORIES = ['전체','머신','그라인더','물 필터 장비','기타 설비'];
 
@@ -455,38 +442,16 @@ function closeSidebar(){
 }
 
 // ── 데이터 로딩 ───────────────────────────────────────────
-async function loadData(isRefresh = false) {
-  if (isRefresh) _pendingFetch = _doFetch();
-
-  // 캐시 있으면 즉시 표시 후 백그라운드 갱신
-  if (!isRefresh) {
-    try {
-      const c = JSON.parse(localStorage.getItem(DATA_CACHE_KEY));
-      if (c && c.data && Date.now() - c.ts < CACHE_TTL_MS) {
-        allData = c.data;
-        activeFilter = null;
-        render();
-        _pendingFetch.then(json => {
-          if (json && json.success) {
-            localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({data: json.data, ts: Date.now()}));
-            allData = json.data;
-            render();
-          }
-        });
-        return;
-      }
-    } catch(e) {}
-  }
-
+async function loadData() {
   showLoading();
   try {
-    const json = await _pendingFetch;
+    const res=await fetch(`${APPS_SCRIPT_URL}?action=getData`);
+    const json=await res.json();
     if (!json.success) throw new Error(json.error);
-    localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({data: json.data, ts: Date.now()}));
-    allData = json.data;
-    activeFilter = null;
+    allData=json.data;
+    activeFilter=null;
     render();
-  } catch(e) { showError(e.message); }
+  } catch(e){showError(e.message);}
 }
 
 // ── 렌더 ──────────────────────────────────────────────────
@@ -1334,6 +1299,9 @@ function doLogin() {
   const user = users.find(u => u.id === id && u.pw === pw);
   if (user) {
     currentUser = user;
+    // 24시간 자동 로그인 저장
+    const session = {userId: user.id, expiry: Date.now() + 24*60*60*1000};
+    try { localStorage.setItem('eq_session', JSON.stringify(session)); } catch(e) {}
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('login-error').style.display = 'none';
     loadData();
@@ -1344,6 +1312,25 @@ function doLogin() {
 
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
 document.getElementById('hist-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeHistModal();});
+
+// 24시간 세션 체크 - 유효하면 자동 로그인
+(function checkSession() {
+  try {
+    const session = JSON.parse(localStorage.getItem('eq_session'));
+    if (session && session.expiry > Date.now()) {
+      const users = getUsers();
+      const user = users.find(u => u.id === session.userId);
+      if (user) {
+        currentUser = user;
+        document.getElementById('login-screen').style.display = 'none';
+        loadData();
+        return;
+      }
+    }
+    // 세션 만료 또는 없음 → 로그인 화면 유지
+    localStorage.removeItem('eq_session');
+  } catch(e) {}
+})();
 // loadData는 로그인 후 doLogin()에서 호출
 </script>
 </body>
