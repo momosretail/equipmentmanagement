@@ -426,10 +426,10 @@ function closeSidebar(){
 const DATA_CACHE_KEY = 'eq_data_cache';
 
 async function loadData() {
+  const cachedStr = localStorage.getItem(DATA_CACHE_KEY);
   try {
-    const cached = JSON.parse(localStorage.getItem(DATA_CACHE_KEY));
-    if (cached) {
-      allData = cached;
+    if (cachedStr) {
+      allData = JSON.parse(cachedStr);
       activeFilter = null;
       render();
     } else {
@@ -441,10 +441,16 @@ async function loadData() {
     const res = await fetch(`${APPS_SCRIPT_URL}?action=getData`);
     const json = await res.json();
     if (!json.success) throw new Error(json.error);
-    allData = json.data;
-    localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(json.data));
-    activeFilter = null;
-    render();
+    const newStr = JSON.stringify(json.data);
+    if (newStr !== cachedStr) {
+      // 데이터가 바뀐 경우에만 다시 그림
+      allData = json.data;
+      localStorage.setItem(DATA_CACHE_KEY, newStr);
+      activeFilter = null;
+      render();
+    } else {
+      allData = json.data;
+    }
   } catch(e) {
     if (!allData) showError(e.message);
   }
