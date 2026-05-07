@@ -423,18 +423,32 @@ function closeSidebar(){
 }
 
 // ── 데이터 로딩 ───────────────────────────────────────────
-async function loadData() {
-  showLoading();
-  try {
-    const res=await fetch(`${APPS_SCRIPT_URL}?action=getData`);
-    const json=await res.json();
-    if (!json.success) throw new Error(json.error);
-    allData=json.data;
-    activeFilter=null;
-    render();
-  } catch(e){showError(e.message);}
-}
+const DATA_CACHE_KEY = 'eq_data_cache';
 
+async function loadData() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(DATA_CACHE_KEY));
+    if (cached) {
+      allData = cached;
+      activeFilter = null;
+      render();
+    } else {
+      showLoading();
+    }
+  } catch(e) { showLoading(); }
+
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getData`);
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error);
+    allData = json.data;
+    localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(json.data));
+    activeFilter = null;
+    render();
+  } catch(e) {
+    if (!allData) showError(e.message);
+  }
+}
 // ── 렌더 ──────────────────────────────────────────────────
 function render() {
   const today=todayISO();
