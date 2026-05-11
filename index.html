@@ -1231,7 +1231,7 @@
         const num = Number(raw);
         if (!raw || Number.isNaN(num))
             return '';
-        return `${num.toLocaleString('ko-KR')}원`;
+        return num.toLocaleString('ko-KR');
     }
     function todayISO() {
         const d = new Date();
@@ -1932,6 +1932,8 @@
         <td style="padding:9px 1rem;font-size:13px;font-family:var(--mono);text-align:right;white-space:nowrap;">${fmtCost(r.cost)}</td>
         <td style="padding:9px 1rem;font-size:13px;color:var(--muted);">${r.manager}</td>
         <td style="padding:9px 1rem;">
+          <button onclick="openRepairModal(${
+            r.id})" style="font-size:11px;color:#2d5a8e;background:none;border:1px solid #c8d8ee;border-radius:5px;padding:2px 7px;cursor:pointer;margin-right:4px;">수정</button>
           <button onclick="deleteRepairRow(${
             r.id})" style="font-size:11px;color:#c62828;background:none;border:1px solid #f0c0c0;border-radius:5px;padding:2px 7px;cursor:pointer;">삭제</button>
         </td>
@@ -2006,8 +2008,11 @@
 
     // ── 수리 이력 추가 모달 ───────────────────────────────────
     let repairModal = null;
+    let editingRepairId = null;
 
-    function openRepairModal() {
+    function openRepairModal(rowIndex=null) {
+        const editingRepair = rowIndex ? repairData.find(r => Number(r.id) === Number(rowIndex)) : null;
+        editingRepairId = editingRepair ? editingRepair.id : null;
         // 모달 동적 생성
         const existing = document.getElementById('repair-modal');
         if (existing)
@@ -2018,30 +2023,30 @@
         modal.className = 'overlay open';
         modal.innerHTML = `
     <div class="modal" style="width:440px;">
-      <h3>🔧 수리 이력 추가</h3>
+      <h3>🔧 수리 이력 ${editingRepair ? '수정' : '추가'}</h3>
       <div class="msub">${
 
         activeStore}</div>
       <label>날짜 *</label>
       <input type="date" id="r-date" value="${
-        todayISO()}">
+        editingRepair ? editingRepair.date : todayISO()}">
       <label>설비 구분 *</label>
       <select id="r-cat" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);">
-        <option value="머신">머신</option>
-        <option value="그라인더">그라인더</option>
-        <option value="물 필터 장비">물 필터 장비</option>
-        <option value="기타 설비">기타 설비</option>
+        <option value="머신" ${editingRepair?.category === '머신' ? 'selected' : ''}>머신</option>
+        <option value="그라인더" ${editingRepair?.category === '그라인더' ? 'selected' : ''}>그라인더</option>
+        <option value="물 필터 장비" ${editingRepair?.category === '물 필터 장비' ? 'selected' : ''}>물 필터 장비</option>
+        <option value="기타 설비" ${editingRepair?.category === '기타 설비' ? 'selected' : ''}>기타 설비</option>
       </select>
       <label>설비명 / 장비명 *</label>
-      <input type="text" id="r-device" placeholder="예: 빅토리아 아르두이노 블랙이글 매버릭">
+      <input type="text" id="r-device" placeholder="예: 빅토리아 아르두이노 블랙이글 매버릭" value="${editingRepair ? escAttr(editingRepair.device) : ''}">
       <label>원인</label>
-      <input type="text" id="r-cause" placeholder="예: 누수 발생, 소음 발생">
+      <input type="text" id="r-cause" placeholder="예: 누수 발생, 소음 발생" value="${editingRepair ? escAttr(editingRepair.cause) : ''}">
       <label>수리 내용</label>
-      <textarea id="r-content" placeholder="수리 내용을 입력하세요" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);min-height:70px;resize:vertical;font-family:var(--sans);"></textarea>
+      <textarea id="r-content" placeholder="수리 내용을 입력하세요" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);min-height:70px;resize:vertical;font-family:var(--sans);">${editingRepair ? escText(editingRepair.content) : ''}</textarea>
       <label>비용</label>
-      <input type="text" id="r-cost" inputmode="numeric" placeholder="예: 50000">
+      <input type="text" id="r-cost" inputmode="numeric" placeholder="예: 50000" value="${editingRepair ? fmtCost(editingRepair.cost) : ''}" oninput="formatRepairCostInput(this)">
       <label>담당자</label>
-      <input type="text" id="r-manager" placeholder="담당자 이름">
+      <input type="text" id="r-manager" placeholder="담당자 이름" value="${editingRepair ? escAttr(editingRepair.manager) : ''}">
       <div class="modal-btns">
         <button class="btn-cancel" onclick="closeRepairModal()">취소</button>
         <button class="btn-save" onclick="saveRepair()">저장</button>
@@ -2082,6 +2087,11 @@
         const m = document.getElementById('repair-modal');
         if (m)
             m.remove();
+        editingRepairId = null;
+    }
+
+    function formatRepairCostInput(input) {
+        input.value = fmtCost(input.value);
     }
 
     async function postWithActionFallback(actions, payload) {
@@ -2110,7 +2120,7 @@
         const device = document.getElementById('r-device').value.trim();
         const cause = document.getElementById('r-cause').value.trim();
         const content = document.getElementById('r-content').value.trim();
-        const cost = document.getElementById('r-cost').value.trim();
+        const cost = document.getElementById('r-cost').value.replace(/[^\d.-]/g, '').trim();
         const manager = document.getElementById('r-manager').value.trim();
         if (!date || !device) {
             showToast('날짜와 설비명은 필수입니다.');
@@ -2118,7 +2128,9 @@
         }
         document.getElementById('r-saving').style.display = 'block';
         try {
-            const json = await postWithActionFallback(['addRepair', 'saveRepair', 'createRepair'], {
+            const payload = {
+                id: editingRepairId,
+                rowIndex: editingRepairId,
                 store: activeStore,
                 category: cat,
                 device,
@@ -2127,11 +2139,15 @@
                 content,
                 cost,
                 manager
-            });
+            };
+            const json = editingRepairId
+                ? await postWithActionFallback(['updateRepair', 'editRepair'], payload)
+                : await postWithActionFallback(['addRepair', 'saveRepair', 'createRepair'], payload);
             if (!json.success)
                 throw new Error(json.error);
+            const wasEditing = Boolean(editingRepairId);
             closeRepairModal();
-            showToast('수리 이력이 추가되었습니다 ✓');
+            showToast(wasEditing ? '수리 이력이 수정되었습니다 ✓' : '수리 이력이 추가되었습니다 ✓');
             await loadRepairs();
             renderRepairList();
         } catch (e) {
@@ -2802,6 +2818,8 @@
     }
 
     const esc = s => String(s).replace(/'/g, "\\'");
+    const escAttr = s => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escText = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     function showLoading() {
         document.getElementById('app').innerHTML = '<div class="state-box"><div class="spinner"></div><p>불러오는 중...</p></div>';
     }
