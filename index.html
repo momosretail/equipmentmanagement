@@ -2069,6 +2069,26 @@
             m.remove();
     }
 
+    async function postWithActionFallback(actions, payload) {
+        let lastJson = null;
+        for (const action of actions) {
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    ...payload,
+                    action
+                })
+            });
+            const json = await res.json();
+            lastJson = json;
+            const message = String(json.error || json.message || '').toLowerCase();
+            const isUnknownAction = json.success === false && message.includes('unknown action');
+            if (!isUnknownAction)
+                return json;
+        }
+        return lastJson;
+    }
+
     async function saveRepair() {
         const date = document.getElementById('r-date').value;
         const cat = document.getElementById('r-cat').value;
@@ -2082,20 +2102,15 @@
         }
         document.getElementById('r-saving').style.display = 'block';
         try {
-            const res = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    action: 'addRepair',
-                    store: activeStore,
-                    category: cat,
-                    device,
-                    date,
-                    cause,
-                    content,
-                    manager
-                })
+            const json = await postWithActionFallback(['addRepair', 'saveRepair', 'createRepair'], {
+                store: activeStore,
+                category: cat,
+                device,
+                date,
+                cause,
+                content,
+                manager
             });
-            const json = await res.json();
             if (!json.success)
                 throw new Error(json.error);
             closeRepairModal();
