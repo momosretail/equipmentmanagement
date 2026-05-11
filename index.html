@@ -1176,6 +1176,9 @@
 
     let activeMode = 'parts'; // 'parts' | 'repair'
     const ADMIN_KEY = 'eq_admins_v1';
+    const SESSION_KEY = 'eq_session';
+    const UI_STATE_KEY = 'eq_ui_state';
+    const SESSION_TTL = 60 * 60 * 1000;
 
     const STORE_COLORS = {
         '본점': {
@@ -1222,6 +1225,13 @@
         if (!d)
             return '';
         return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}`;
+    }
+    function fmtCost(value) {
+        const raw = String(value || '').replace(/[^\d.-]/g, '');
+        const num = Number(raw);
+        if (!raw || Number.isNaN(num))
+            return '';
+        return `${num.toLocaleString('ko-KR')}원`;
     }
     function todayISO() {
         const d = new Date();
@@ -1383,7 +1393,7 @@
             activeFilter = null;
             render();
         } catch (e) {
-            showError(e.message);
+            showError(e.message || '데이터를 불러오지 못했습니다.');
         }
     }
 
@@ -1396,6 +1406,7 @@
         document.getElementById('app').innerHTML = `<div id="store-content"></div>`;
         renderStore();
         updateSidebarActive();
+        saveUiState();
     }
 
     function toggleFilter(cls) {
@@ -1918,6 +1929,7 @@
         <td style="padding:9px 1rem;font-size:13px;font-weight:500;">${r.device}</td>
         <td style="padding:9px 1rem;font-size:13px;color:var(--muted);">${r.cause}</td>
         <td style="padding:9px 1rem;font-size:13px;">${r.content}</td>
+        <td style="padding:9px 1rem;font-size:13px;font-family:var(--mono);text-align:right;white-space:nowrap;">${fmtCost(r.cost)}</td>
         <td style="padding:9px 1rem;font-size:13px;color:var(--muted);">${r.manager}</td>
         <td style="padding:9px 1rem;">
           <button onclick="deleteRepairRow(${
@@ -1942,6 +1954,7 @@
                 <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 1rem;text-align:left;border-bottom:1px solid var(--border);">설비명</th>
                 <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 1rem;text-align:left;border-bottom:1px solid var(--border);">원인</th>
                 <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 1rem;text-align:left;border-bottom:1px solid var(--border);">수리 내용</th>
+                <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 1rem;text-align:right;border-bottom:1px solid var(--border);">비용</th>
                 <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 1rem;text-align:left;border-bottom:1px solid var(--border);">담당자</th>
                 <th style="border-bottom:1px solid var(--border);"></th>
               </tr>
@@ -2025,6 +2038,8 @@
       <input type="text" id="r-cause" placeholder="예: 누수 발생, 소음 발생">
       <label>수리 내용</label>
       <textarea id="r-content" placeholder="수리 내용을 입력하세요" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);min-height:70px;resize:vertical;font-family:var(--sans);"></textarea>
+      <label>비용</label>
+      <input type="text" id="r-cost" inputmode="numeric" placeholder="예: 50000">
       <label>담당자</label>
       <input type="text" id="r-manager" placeholder="담당자 이름">
       <div class="modal-btns">
@@ -2072,7 +2087,7 @@
     async function postWithActionFallback(actions, payload) {
         let lastJson = null;
         for (const action of actions) {
-            const res = await fetch(APPS_SCRIPT_URL, {
+            const res = await fetch(`${APPS_SCRIPT_URL}?action=${encodeURIComponent(action)}`, {
                 method: 'POST',
                 body: JSON.stringify({
                     ...payload,
@@ -2095,6 +2110,7 @@
         const device = document.getElementById('r-device').value.trim();
         const cause = document.getElementById('r-cause').value.trim();
         const content = document.getElementById('r-content').value.trim();
+        const cost = document.getElementById('r-cost').value.trim();
         const manager = document.getElementById('r-manager').value.trim();
         if (!date || !device) {
             showToast('날짜와 설비명은 필수입니다.');
@@ -2109,6 +2125,7 @@
                 date,
                 cause,
                 content,
+                cost,
                 manager
             });
             if (!json.success)
@@ -2626,6 +2643,7 @@
         activeMode = mode;
         activeFilter = null;
         document.getElementById('topbar-title').textContent = mode === 'settings' ? '담당자 설정' : '매장별 담당자';
+        saveUiState();
         document.getElementById('sub-담당자').classList.add('open');
         document.getElementById('arrow-담당자').classList.add('open');
         updateSidebarActive();
@@ -2640,6 +2658,7 @@
         activeFilter = null;
         const modeLabel = mode === 'repair' ? ' · 수리 이력' : ' · 부품 교체';
         document.getElementById('topbar-title').textContent = store + modeLabel;
+        saveUiState();
         updateSidebarActive();
         if (allData)
             renderStore();
@@ -2657,6 +2676,7 @@
         };
         document.getElementById('topbar-title').textContent = titles[s] || s;
         activeFilter = null;
+        saveUiState();
         updateSidebarActive();
         if (allData)
             render();
@@ -2786,7 +2806,10 @@
         document.getElementById('app').innerHTML = '<div class="state-box"><div class="spinner"></div><p>불러오는 중...</p></div>';
     }
     function showError(m) {
-        document.getElementById('app').innerHTML = `<div class="state-box"><p>로딩 실패<br><small>${m}</small></p></div>`;
+        const detail = m === 'Failed to fetch'
+            ? '서버에 연결하지 못했습니다. Apps Script 배포 권한과 배포 URL을 확인해주세요.'
+            : m;
+        document.getElementById('app').innerHTML = `<div class="state-box"><p>로딩 실패<br><small>${detail}</small></p></div>`;
     }
     function showToast(msg) {
         const t = document.getElementById('toast');
@@ -2825,6 +2848,73 @@
         } catch (e) {}
     }
 
+    function saveUiState() {
+        try {
+            localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+                activeStore,
+                activeMode,
+                activeFilter
+            }));
+        } catch (e) {}
+    }
+
+    function restoreUiState() {
+        try {
+            const state = JSON.parse(localStorage.getItem(UI_STATE_KEY));
+            if (!state)
+                return;
+            if (state.activeStore)
+                activeStore = state.activeStore;
+            if (state.activeMode)
+                activeMode = state.activeMode;
+            if ('activeFilter' in state)
+                activeFilter = state.activeFilter;
+        } catch (e) {}
+    }
+
+    function syncTitleFromState() {
+        const titles = {
+            '대시보드': '대시보드',
+            '매장별담당자': activeMode === 'settings' ? '담당자 설정' : '매장별 담당자',
+            '알림발송': '알림 발송',
+            '시스템관리자': '시스템 관리자'
+        };
+        const modeLabel = activeMode === 'repair' ? ' · 수리 이력' : ' · 부품 교체';
+        document.getElementById('topbar-title').textContent = STORES.includes(activeStore)
+            ? activeStore + modeLabel
+            : (titles[activeStore] || activeStore);
+    }
+
+    function restoreSession() {
+        try {
+            const session = JSON.parse(localStorage.getItem(SESSION_KEY));
+            if (!session || !session.userId || Date.now() > session.expiry) {
+                localStorage.removeItem(SESSION_KEY);
+                return false;
+            }
+
+            const user = getUsers().find(u => u.id === session.userId);
+            if (!user) {
+                localStorage.removeItem(SESSION_KEY);
+                return false;
+            }
+
+            currentUser = user;
+            localStorage.setItem(SESSION_KEY, JSON.stringify({
+                userId: user.id,
+                expiry: Date.now() + SESSION_TTL
+            }));
+            restoreUiState();
+            syncTitleFromState();
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('login-error').style.display = 'none';
+            loadData();
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     function doLogin() {
         const id = document.getElementById('login-id').value.trim();
         const pw = document.getElementById('login-pw').value;
@@ -2835,11 +2925,12 @@
             // 24시간 자동 로그인 저장
             const session = {
                 userId: user.id,
-                expiry: Date.now() + 24 * 60 * 60 * 1000
+                expiry: Date.now() + SESSION_TTL
             };
             try {
-                localStorage.setItem('eq_session', JSON.stringify(session));
+                localStorage.setItem(SESSION_KEY, JSON.stringify(session));
             } catch (e) {}
+            saveUiState();
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('login-error').style.display = 'none';
             loadData();
@@ -2851,7 +2942,8 @@
     function doLogout() {
         currentUser = null;
         try {
-            localStorage.removeItem('eq_session');
+            localStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem(UI_STATE_KEY);
         } catch (e) {}
         document.getElementById('login-id').value = '';
         document.getElementById('login-pw').value = '';
@@ -2873,7 +2965,9 @@
             closeHistModal();
     });
 
-    // loadData는 로그인 후 doLogin()에서 호출
+    if (!restoreSession()) {
+        document.getElementById('login-screen').style.display = 'flex';
+    }
     </script>
 </body>
 </html>
