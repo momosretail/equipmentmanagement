@@ -1,507 +1,3371 @@
-// ============================================================
-// MOMOS COFFEE 장비 관리 시스템 - Google Apps Script
-// ============================================================
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>바리스타팀 매장사업부 QA 장비 관리 시스템</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+    *, * ::before, * ::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
 
-const SHEET_NAME = '장비관리';
-const HISTORY_SHEET_NAME = '교체이력';
-const REPAIR_SHEET_NAME = '수리이력';
-const USER_SHEET_NAME = '사용자';
-const BAKERY_EQUIPMENT_SHEET_NAME = '베이커리장비';
-const DATA_CACHE_KEY = 'equipment_data_v1';
-const BAKERY_EQUIPMENT_CACHE_KEY = 'bakery_equipment_v1';
-const DATA_CACHE_SECONDS = 60;
+    :root {
+        --bg: #f4f2ee;
+        --surface: #fff;
+        --surface2: #f9f8f5;
+        --border: #e0e0dc;
+        --border2: #ccc;
+        --text: #1a1916;
+        --muted: #7a7770;
+        --accent: #1a1916;
+        --blue: #909288;
+        --blue-bg: #f0f0ee;
+        --sidebar-w: 220px;
+        --r: 8px;
+        --sans: 'Noto Sans KR', sans-serif;
+        --mono: 'DM Mono', monospace;
+    }/* ── Login ── */
+    .login-logo {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+        margin-bottom: 1.5rem;
+    }
 
-const BAKERY_EQUIPMENT_CATEGORIES = ['냉장·냉동 설비', '발효·도우 관리 설비', '반죽·성형 장비', '베이킹·가열 장비'];
+    .login-field input::placeholder {
+        color: rgba(255, 255, 255, .5);
+        letter-spacing: .08em;
+    }
 
-const STORE_MANAGER_LIMITS = {
-  '본점': 2,
-  '영도': 2,
-  '마린시티': 2,
-  '도모헌': 1,
-  '베이커리': 1
-};
+    .login-field input:focus {
+        background: rgba(255, 255, 255, .22);
+        border-color: rgba(255, 255, 255, .6);
+    }
 
-function toDateStr(val) {
-  if (!val || val === '') return '';
-  try {
-    var d = new Date(val);
-    if (isNaN(d.getTime())) return '';
-    return Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd');
-  } catch(e) { return ''; }
-}
+    body {
+        font-family: var(--sans);
+        background: #f4f2ee;
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+    }/* ── Sidebar ── */
+    .sidebar {
+        width: var(--sidebar-w);
+        min-height: 100vh;
+        background: #1a1916;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 100;
+    }
 
-function nowStr_() {
-  return Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-}
+    .sidebar-logo {
+        padding: 1.4rem 1.2rem 1rem;
+        border-bottom: 1px solid #7a7870;
+    }
 
-function json_(result) {
-  return ContentService.createTextOutput(JSON.stringify(result))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+    .sidebar-logo .brand {
+        font-size: 13px;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: .05em;
+        line-height: 1.4;
+    }
 
-function clearDataCache_() {
-  CacheService.getScriptCache().remove(DATA_CACHE_KEY);
-}
+    .sidebar-logo .sub {
+        font-size: 12px;
+        color: #ddd;
+        margin-top: 2px;
+    }
 
-function clearBakeryEquipmentCache_() {
-  CacheService.getScriptCache().remove(BAKERY_EQUIPMENT_CACHE_KEY);
-}
+    .sidebar-section {
+        padding: .75rem 1rem .25rem;
+        font-size: 12px;
+        color: #ccc;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
 
-function setup() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: .6rem 1.2rem;
+        font-size: 13px;
+        color: #e8e6e2;
+        cursor: pointer;
+        transition: all .15s;
+        border-left: 3px solid transparent;
+    }
 
-  var sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
-    var headers = ['매장','카테고리','장비명','부품명','교체주기(월)','마지막교체일','다음교체예정일','비고','최종수정일시'];
-    sheet.getRange(1,1,1,headers.length).setValues([headers])
-      .setFontWeight('bold').setBackground('#1a1916').setFontColor('#ffffff');
-    sheet.setFrozenRows(1);
-  }
+    .nav-item:hover {
+        background: #ffffff12;
+        color: #fff;
+    }
 
-  var hSheet = ss.getSheetByName(HISTORY_SHEET_NAME);
-  if (!hSheet) {
-    hSheet = ss.insertSheet(HISTORY_SHEET_NAME);
-    var hHeaders = ['매장','장비명','부품명','교체일','담당자','메모','기록일시'];
-    hSheet.getRange(1,1,1,hHeaders.length).setValues([hHeaders])
-      .setFontWeight('bold').setBackground('#2d5a8e').setFontColor('#ffffff');
-    hSheet.setFrozenRows(1);
-  }
+    .nav-item.active {
+        background: #ffffff18;
+        color: #fff;
+        border-left-color: #fff;
+    }
 
-  ensureRepairSheet();
-  ensureBakeryEquipmentSheet();
-  setupUserSheet();
-  clearDataCache_();
-  clearBakeryEquipmentCache_();
-  return {success:true};
-}
+    .nav-item .nav-icon {
+        font-size: 14px;
+        width: 18px;
+        text-align: center;
+    }
 
-function doGet(e) {
-  var result;
-  try {
-    var action = (e.parameter && e.parameter.action) || 'getData';
-    if (action === 'getData') result = getData();
-    else if (action === 'getHistory') result = getHistory(e.parameter.store, e.parameter.device, e.parameter.part);
-    else if (action === 'getRepairs') result = getRepairs(e.parameter.store, e.parameter.category);
-    else if (action === 'getBakeryEquipment') result = getBakeryEquipment();
-    else result = {success:false, error:'unknown action'};
-  } catch(err) {
-    result = {success:false, error:err.toString()};
-  }
-  return json_(result);
-}
+    .nav-store {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: .5rem 1.2rem .5rem 1.5rem;
+        font-size: 13px;
+        color: #e8e6e2;
+        cursor: pointer;
+        transition: all .15s;
+        border-left: 3px solid transparent;
+    }
 
-function doPost(e) {
-  var result;
-  try {
-    var p = JSON.parse((e.postData && e.postData.contents) || '{}');
-    var action = p.action || (e.parameter && e.parameter.action) || '';
-    p.action = action;
-    if (action === 'updateRow') result = updateRow(p);
-    else if (action === 'sendMail') result = sendMail(p);
-    else if (action === 'login') result = loginUser(p);
-    else if (action === 'listUsers') result = listUsers(p);
-    else if (action === 'addUser') result = addUser(p);
-    else if (action === 'updateMyProfile') result = updateMyProfile(p);
-    else if (action === 'resetUserPassword') result = resetUserPassword(p);
-    else if (action === 'deleteUser') result = deleteUser(p);
-    else if (action === 'updateBakeryEquipment') result = updateBakeryEquipment(p);
-    else if (action === 'deleteBakeryEquipment') result = deleteBakeryEquipment(p);
-    else if (action === 'addRepair' || action === 'saveRepair' || action === 'createRepair') result = addRepair(p);
-    else if (action === 'updateRepair' || action === 'editRepair') result = updateRepair(p);
-    else if (action === 'deleteRepair') result = deleteRepair(p);
-    else result = {success:false, error:'unknown action'};
-  } catch(err) {
-    result = {success:false, error:err.toString()};
-  }
-  return json_(result);
-}
+    .nav-store:hover {
+        background: #ffffff12;
+        color: #fff;
+    }
 
-function getData() {
-  var cache = CacheService.getScriptCache();
-  var cached = cache.get(DATA_CACHE_KEY);
-  if (cached) return JSON.parse(cached);
+    .nav-store.active {
+        color: #fff;
+        border-left-color: #fff;
+    }
 
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  if (!sheet) return {success:false, error:'setup()을 먼저 실행해주세요.'};
-  var rows = sheet.getDataRange().getValues();
-  var data = {};
-  for (var i = 1; i < rows.length; i++) {
-    var store = rows[i][0], cat = rows[i][1], device = rows[i][2], part = rows[i][3],
-        interval = rows[i][4], last = rows[i][5], next = rows[i][6], note = rows[i][7];
-    if (!store) continue;
-    if (!data[store]) data[store] = {};
-    if (!data[store][cat]) data[store][cat] = {};
-    if (!data[store][cat][device]) data[store][cat][device] = [];
-    data[store][cat][device].push({
-      rowIndex: i + 1,
-      store: String(store || ''),
-      category: String(cat || ''),
-      device: String(device || ''),
-      part: String(part || ''),
-      interval: Number(interval || 0),
-      last: toDateStr(last),
-      purchaseDate: toDateStr(last),
-      next: toDateStr(next),
-      note: String(note || '')
+    .nav-store .store-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .sidebar-bottom {
+        margin-top: auto;
+        padding: 1rem 1.2rem;
+        border-top: 1px solid #7a7870;
+    }
+
+    .date-small {
+        font-size: 10px;
+        color: #ccc;
+        font-family: var(--mono);
+    }
+
+    .logout-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        margin-bottom: .75rem;
+        padding: 7px 10px;
+        border: 1px solid #7a7870;
+        border-radius: 6px;
+        background: #ffffff10;
+        color: #e8e6e2;
+        font-size: 12px;
+        font-family: var(--sans);
+        cursor: pointer;
+        transition: all .15s;
+    }
+
+    .logout-btn:hover {
+        background: #ffffff18;
+        color: #fff;
+        border-color: #aaa;
+    }/* ── Main ── */
+    .main {
+        margin-left: var(--sidebar-w);
+        flex: 1;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: #f4f2ee;
+    }
+
+    .topbar {
+        background: #f4f2ee;
+        border-bottom: 1px solid #e2dfd8;
+        border-bottom: 1px solid var(--border);
+        padding: .85rem 1.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+    }
+
+    .topbar-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .topbar-right {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .date-chip {
+        font-size: 11px;
+        color: var(--muted);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-family: var(--mono);
+    }
+
+    .refresh-btn {
+        font-size: 12px;
+        background: #1a1916;
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        padding: 6px 14px;
+        cursor: pointer;
+    }
+
+    .content {
+        padding: 1.25rem 1.5rem 4rem;
+        flex: 1;
+        background: #f4f2ee;
+        overflow-x: hidden;
+    }/* ── Summary ── */
+    .summary {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 1.75rem;
+        min-width: 0;
+    }
+
+    .s-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 1.2rem 1.25rem;
+        cursor: pointer;
+        transition: all .15s;
+        user-select: none;
+    }
+
+    .s-card:hover {
+        border-color: var(--border2);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+    }
+
+    .s-card.active-filter {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .s-label {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 8px;
+    }
+
+    .s-num {
+        font-size: 34px;
+        font-weight: 600;
+        font-family: var(--mono);
+        line-height: 1;
+    }
+
+    .s-card.c-danger .s-num {
+        color: #C62828;
+    }
+
+    .s-card.c-warn .s-num {
+        color: #EF6C00;
+    }
+
+    .s-card.c-ok .s-num {
+        color: #2E7D32;
+    }/* ── Filter panel ── */
+    .filter-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.25rem;
+        display: none;
+    }
+
+    .filter-panel.open {
+        display: block;
+    }
+
+    .filter-panel-title {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: .75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .filter-close {
+        font-size: 12px;
+        color: var(--muted);
+        cursor: pointer;
+        background: none;
+        border: none;
+    }
+
+    .filter-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .filter-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        padding: 6px 8px;
+        background: var(--bg);
+        border-radius: 6px;
+    }
+
+    .filter-store-badge {
+        font-size: 10px;
+        border-radius: 10px;
+        padding: 2px 9px;
+        white-space: nowrap;
+        font-weight: 600;
+    }
+
+    .filter-device {
+        color: var(--muted);
+        font-size: 11px;
+    }/* ── Category ── */
+    .cat-block {
+        margin-bottom: 1.5rem;
+    }
+
+    .cat-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .cat-title::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+    }/* ── Device ── */
+    .device-block {
+        margin-bottom: 1rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        overflow: hidden;
+    }
+
+    .device-header {
+        padding: .75rem 1rem;
+        background: var(--surface2);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .5rem;
+        flex-wrap: wrap;
+    }
+
+    .device-name {
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .device-status {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    .mini-badge {
+        font-size: 10px;
+        padding: 2px 7px;
+        border-radius: 10px;
+        font-weight: 500;
+    }/* ── Table ── */
+    .parts-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .parts-table th:nth-child(1) {
+        width: 18%;
+    }
+
+    .parts-table th:nth-child(2) {
+        width: 8%;
+    }
+
+    .parts-table th:nth-child(3) {
+        width: 12%;
+    }
+
+    .parts-table th:nth-child(4) {
+        width: 12%;
+    }
+
+    .parts-table th:nth-child(5) {
+        width: 16%;
+    }
+
+    .parts-table th:nth-child(6) {
+        width: 22%;
+    }
+
+    .parts-table th:nth-child(7) {
+        width: 12%;
+    }
+
+    .parts-table td {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .parts-table th {
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 500;
+        padding: 7px 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface2);
+    }
+
+    .parts-table td {
+        font-size: 13px;
+        padding: 9px 1rem;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+    }
+
+    .parts-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .parts-table tr:hover td {
+        background: #faf9f6;
+    }
+
+    .part-name {
+        font-weight: 500;
+    }
+
+    .part-sub {
+        display: block;
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+
+    .part-interval {
+        color: var(--muted);
+    }
+
+    .date-empty {
+        color: var(--muted);
+        font-style: italic;
+    }
+
+    .dday-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
+        white-space: nowrap;
+    }
+
+    .edit-btn {
+        font-size: 11px;
+        color: var(--muted);
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 3px 8px;
+        cursor: pointer;
+        margin-right: 4px;
+    }
+
+    .edit-btn:hover {
+        color: var(--text);
+        border-color: var(--border2);
+    }
+
+    .hist-btn {
+        font-size: 11px;
+        color: var(--blue);
+        border: 1px solid var(--blue-bg);
+        border-radius: 5px;
+        padding: 3px 8px;
+        cursor: pointer;
+        background: var(--blue-bg);
+    }
+
+    .hist-btn:hover {
+        background: #d0e0f5;
+    }
+
+    .note-text {
+        font-size: 11px;
+        color: var(--muted);
+        font-style: italic;
+    }
+
+    .mobile-parts {
+        display: none;
+    }
+
+    .submenu {
+        display: none;
+        background: #111;
+        border-left: 2px solid #333;
+    }
+
+    .submenu.open {
+        display: block;
+    }
+
+    .nav-sub {
+        padding: .45rem 1rem .45rem 2rem;
+        font-size: 12px;
+        color: #bbb;
+        cursor: pointer;
+        transition: all .15s;
+    }
+
+    .nav-sub:hover {
+        color: #fff;
+        background: #ffffff10;
+    }
+
+    .nav-sub.active {
+        color: #fff;
+        background: #ffffff18;
+    }
+
+    .menu-arrow {
+        margin-left: auto;
+        font-size: 12px;
+        color: #666;
+        transition: transform .2s;
+    }
+
+    .menu-arrow.open {
+        transform: rotate(90deg);
+    }/* ── Admin ── */
+    .admin-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+        margin-bottom: 1.5rem;
+    }
+
+    .admin-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 1.1rem 1.25rem;
+    }
+
+    .store-badge {
+        font-size: 10px;
+        font-weight: 600;
+        border-radius: 20px;
+        padding: 3px 12px;
+        display: inline-block;
+        margin-bottom: 10px;
+    }
+
+    .admin-field {
+        margin-bottom: 8px;
+    }
+
+    .admin-field label {
+        font-size: 10px;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 3px;
+    }
+
+    .admin-field input {
+        width: 100%;
+        font-size: 12px;
+        padding: 5px 8px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: var(--bg);
+        color: var(--text);
+    }
+
+    .admin-field input:focus {
+        outline: none;
+        border-color: var(--border2);
+    }
+
+    .admin-save-btn {
+        width: 100%;
+        margin-top: 10px;
+        padding: 7px;
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .alert-section {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 1.25rem;
+    }
+
+    .alert-section h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .alert-desc {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 1rem;
+    }
+
+    .alert-btn {
+        padding: 8px 20px;
+        background: var(--blue);
+        color: #fff;
+        border: none;
+        border-radius: 20px;
+        font-size: 13px;
+        cursor: pointer;
+        margin-top: 1rem;
+    }
+
+    .alert-btn:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+
+    .alert-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .alert-item:last-child {
+        border-bottom: none;
+    }
+
+    .alert-store {
+        font-size: 10px;
+        border-radius: 10px;
+        padding: 2px 9px;
+        white-space: nowrap;
+        font-weight: 600;
+    }/* ── States ── */
+    .state-box {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: var(--muted);
+    }
+
+    .spinner {
+        width: 24px;
+        height: 24px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin .7s linear infinite;
+        margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }/* ── Modal ── */
+    .overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .6);
+        z-index: 200;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .overlay.open {
+        display: flex;
+    }
+
+    .modal {
+        background: var(--surface);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 1.5rem;
+        width: 380px;
+        max-width: 94vw;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .modal h3 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 3px;
+    }
+
+    .modal .msub {
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 1.25rem;
+    }
+
+    .modal label {
+        font-size: 11px;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 4px;
+        margin-top: 12px;
+    }
+
+    .modal input[type=date], .modal input[type=text], .modal textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 13px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+    }
+
+    .modal textarea {
+        resize: vertical;
+        min-height: 60px;
+    }
+
+    .modal input:focus, .modal textarea:focus {
+        outline: none;
+        border-color: var(--border2);
+    }
+
+    .auto-btn {
+        margin-top: 8px;
+        font-size: 11px;
+        padding: 5px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        cursor: pointer;
+    }
+
+    .modal-btns {
+        display: flex;
+        gap: 8px;
+        margin-top: 1.25rem;
+    }
+
+    .modal-btns button {
+        flex: 1;
+        padding: 9px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    .btn-cancel {
+        background: var(--bg);
+        color: var(--muted);
+    }
+
+    .btn-save {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+        font-weight: 500;
+    }
+
+    .btn-save:disabled {
+        opacity: .45;
+        cursor: not-allowed;
+    }
+
+    .saving {
+        font-size: 11px;
+        color: var(--muted);
+        text-align: center;
+        margin-top: 6px;
+        display: none;
+    }
+
+    .hist-item {
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .hist-item:last-child {
+        border-bottom: none;
+    }
+
+    .hist-date {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+    }
+
+    .hist-manager {
+        font-size: 12px;
+        color: var(--blue);
+        margin-top: 2px;
+    }
+
+    .hist-memo {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 3px;
+        font-style: italic;
+    }
+
+    .hist-empty {
+        font-size: 12px;
+        color: var(--muted);
+        padding: 1rem 0;
+        text-align: center;
+    }
+
+    .toast {
+        position: fixed;
+        bottom: 2rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(60px);
+        background: var(--accent);
+        color: #fff;
+        font-size: 12px;
+        padding: 9px 20px;
+        border-radius: 20px;
+        opacity: 0;
+        transition: all .25s;
+        z-index: 999;
+        pointer-events: none;
+        white-space: nowrap;
+    }
+
+    .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }/* ── Mobile ── */
+    .hamburger {
+        display: none;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        font-size: 20px;
+        color: var(--text);
+    }
+
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .65);
+        z-index: 99;
+    }
+
+    .sidebar-overlay.open {
+        display: block;
+    }
+
+    @media (max-width: 768px) {
+        .sidebar {
+            transform: translateX(-100%);
+            transition: transform .25s;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .main {
+            margin-left: 0;
+        }
+
+        .hamburger {
+            display: block;
+        }
+
+        .summary {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .parts-table th:nth-child(2), .parts-table td:nth-child(2), .parts-table th:nth-child(3), .parts-table td:nth-child(3), .parts-table th:nth-child(4), .parts-table td:nth-child(4), .parts-table th:nth-child(6), .parts-table td:nth-child(6) {
+            display: none;
+        }
+
+        .content {
+            padding: 1rem .75rem 4rem;
+        }
+
+        .topbar {
+            padding: .75rem 1rem;
+        }
+
+        .s-num {
+            font-size: 26px;
+        }
+
+        .s-label {
+            font-size: 11px;
+        }
+
+        .parts-table th {
+            font-size: 12px;
+        }
+
+        .parts-table td {
+            font-size: 12px;
+        }
+
+        .dday-badge {
+            font-size: 11px;
+        }
+
+        .device-name {
+            font-size: 13px !important;
+        }
+
+        .filter-item {
+            font-size: 12px;
+        }
+
+        .device-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .admin-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .topbar-title {
+            font-size: 15px;
+        }/* 모바일 카드형 테이블 */
+
+        .parts-table {
+            display: none;
+        }
+
+        .mobile-parts {
+            display: block;
+        }
+    }
+    </style>
+</head>
+<body>
+    <!-- 로그인 화면 -->
+    <div id="login-screen" style="display:none;position:fixed;inset:0;z-index:9999;background:#d8d3c2;align-items:center;justify-content:center;flex-direction:column;">
+        <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:2rem;">
+            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAO4AAABVCAIAAADBgU/DAAAACXBIWXMAAAsSAAALEgHS3X78AAAA/0lEQVR4nO3SwQ3AIBDAsNL9dz6WQEJE9gR5ZM3MB+/7bwfAGVYmwspEWJkIKxNhZSKsTISVibAyEVYmwspEWJkIKxNhZSKsTISVibAyEVYmwspEWJkIKxNhZSKsTISVibAyEVYmwspEWJkIKxNhZSKsTISVibAyEVYmwspEWJkIKxNhZSKsTISVibAyEVYmwspEWJkIKxNhZSKsTISVibAyEVYmwspEWJkIKxNhZSKsTISVibAyEVYmwspEWJkIKxNhZSKsTISVibAyEVYmwspEWJkIKxNhZSKsTISVibAyEVYmwspEWJkIKxNhZSKsTISVibAyEVYmwspEWJmIDVWmA6fuUr65AAAAAElFTkSuQmCC" alt="MOMOS COFFEE" style="width:200px;max-width:52vw;height:auto;display:block;margin-bottom:1.25rem;">
+            <div style="font-size:11px;color:#666;letter-spacing:.15em;text-transform:uppercase;">매장사업부 QA 장비 관리 시스템</div>
+        </div>
+        <div style="width:320px;display:flex;flex-direction:column;gap:10px;">
+            <input type="text" id="login-id" placeholder="아이디" autocomplete="username" style="width:100%;padding:12px 16px;border:1px solid #c0bdb0;border-radius:8px;font-size:14px;background:rgba(255,255,255,0.5);color:#1a1916;outline:none;" onkeydown="if(event.key==='Enter')document.getElementById('login-pw').focus()">
+            <input type="password" id="login-pw" placeholder="비밀번호" autocomplete="current-password" style="width:100%;padding:12px 16px;border:1px solid #c0bdb0;border-radius:8px;font-size:14px;background:rgba(255,255,255,0.5);color:#1a1916;outline:none;" onkeydown="if(event.key==='Enter')doLogin()">
+            <button onclick="doLogin()" style="width:100%;padding:12px;background:#1a1916;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-top:4px;">
+                  로그인
+                </button>
+            <div id="login-error" style="font-size:12px;color:#c62828;text-align:center;display:none;">아이디 또는 비밀번호가 올바르지 않습니다.</div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <div class="brand">MOMOS COFFEE</div>
+            <div class="sub">매장사업부 QA 장비 관리 시스템</div>
+        </div>
+
+        <div class="sidebar-section">메인</div>
+        <div class="nav-item active" data-store="대시보드" onclick="selectStore('대시보드')">
+            <span class="nav-icon">📊</span>
+             대시보드
+              
+        </div>
+
+        <div class="sidebar-section">매장</div>
+        <div class="nav-store" data-store="본점" onclick="toggleStoreMenu('본점')">
+            <span class="store-dot" style="background:#ffffff;"></span>
+             본점
+                
+            <span class="menu-arrow" id="arrow-본점">›</span>
+        </div>
+        <div class="submenu" id="sub-본점">
+            <div class="nav-sub" data-store="본점" data-mode="parts" onclick="selectStoreMode('본점','parts')">📦 장비 부품 교체 주기</div>
+            <div class="nav-sub" data-store="본점" data-mode="repair" onclick="selectStoreMode('본점','repair')">🔧 설비·시설물 수리 이력</div>
+        </div>
+        <div class="nav-store" data-store="영도" onclick="toggleStoreMenu('영도')">
+            <span class="store-dot" style="background:#5DADE2;"></span>
+             영도
+                
+            <span class="menu-arrow" id="arrow-영도">›</span>
+        </div>
+        <div class="submenu" id="sub-영도">
+            <div class="nav-sub" data-store="영도" data-mode="parts" onclick="selectStoreMode('영도','parts')">📦 장비 부품 교체 주기</div>
+            <div class="nav-sub" data-store="영도" data-mode="repair" onclick="selectStoreMode('영도','repair')">🔧 설비·시설물 수리 이력</div>
+        </div>
+        <div class="nav-store" data-store="마린시티" onclick="toggleStoreMenu('마린시티')">
+            <span class="store-dot" style="background:#52BE80;"></span>
+             마린시티
+                
+            <span class="menu-arrow" id="arrow-마린시티">›</span>
+        </div>
+        <div class="submenu" id="sub-마린시티">
+            <div class="nav-sub" data-store="마린시티" data-mode="parts" onclick="selectStoreMode('마린시티','parts')">📦 장비 부품 교체 주기</div>
+            <div class="nav-sub" data-store="마린시티" data-mode="repair" onclick="selectStoreMode('마린시티','repair')">🔧 설비·시설물 수리 이력</div>
+        </div>
+        <div class="nav-store" data-store="도모헌" onclick="toggleStoreMenu('도모헌')">
+            <span class="store-dot" style="background:#E59866;"></span>
+             도모헌
+                
+            <span class="menu-arrow" id="arrow-도모헌">›</span>
+        </div>
+        <div class="submenu" id="sub-도모헌">
+            <div class="nav-sub" data-store="도모헌" data-mode="parts" onclick="selectStoreMode('도모헌','parts')">📦 장비 부품 교체 주기</div>
+            <div class="nav-sub" data-store="도모헌" data-mode="repair" onclick="selectStoreMode('도모헌','repair')">🔧 설비·시설물 수리 이력</div>
+        </div>
+        <div class="nav-store" data-store="베이커리" onclick="toggleStoreMenu('베이커리')">
+            <span class="store-dot" style="background:#B7791F;"></span>
+             베이커리
+                
+            <span class="menu-arrow" id="arrow-베이커리">›</span>
+        </div>
+        <div class="submenu" id="sub-베이커리">
+            <div class="nav-sub" data-store="베이커리" data-mode="parts" onclick="selectStoreMode('베이커리','parts')">📋 장비 및 설비 리스트</div>
+            <div class="nav-sub" data-store="베이커리" data-mode="repair" onclick="selectStoreMode('베이커리','repair')">🔧 설비·시설물 수리 이력</div>
+        </div>
+
+        <div class="sidebar-section" style="margin-top:.5rem;">관리</div>
+        <div class="nav-item" data-store="매장별담당자" onclick="toggleManagerMenu()">
+            <span class="nav-icon">👥</span>
+             매장별 담당자
+                
+            <span class="menu-arrow" id="arrow-담당자">›</span>
+        </div>
+        <div class="submenu" id="sub-담당자">
+            <div class="nav-sub" data-store="매장별담당자" data-mode="list" onclick="selectManagerMode('list')">👥 담당자 리스트</div>
+            <div class="nav-sub" data-store="매장별담당자" data-mode="settings" onclick="selectManagerMode('settings')">⚙️ 담당자 설정</div>
+        </div>
+        <div class="nav-item" data-store="알림발송" onclick="selectStore('알림발송')">
+            <span class="nav-icon">📧</span>
+             알림 발송
+              
+        </div>
+        <div class="nav-item" data-store="시스템관리자" onclick="selectStore('시스템관리자')">
+            <span class="nav-icon">🔐</span>
+             시스템 관리자
+              
+        </div>
+
+        <div class="sidebar-bottom">
+            <button class="logout-btn" onclick="doLogout()">↩ 로그아웃</button>
+            <div class="date-small" id="sidebar-date"></div>
+        </div>
+    </div>
+
+    <!-- Sidebar overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <!-- Main -->
+    <div class="main">
+        <div class="topbar">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <span class="topbar-title" id="topbar-title">대시보드</span>
+            </div>
+            <div class="topbar-right">
+                <div class="date-chip" id="date-chip"></div>
+                <button class="refresh-btn" onclick="loadData()">↻ 새로고침</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div id="app"></div>
+        </div>
+    </div>
+
+    <!-- 수정 모달 -->
+    <div class="overlay" id="modal">
+        <div class="modal">
+            <h3 id="m-title"></h3>
+            <div class="msub" id="m-sub"></div>
+            <label>마지막 교체일자</label>
+            <input type="date" id="m-last">
+            <label>다음 교체일자</label>
+            <input type="date" id="m-next">
+            <button class="auto-btn" onclick="autoCalc()">교체주기로 자동계산</button>
+            <label>담당자</label>
+            <input type="text" id="m-manager" placeholder="담당자 이름">
+            <label>메모</label>
+            <textarea id="m-memo" placeholder="특이사항, 교체 사유 등"></textarea>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeModal()">취소</button>
+                <button class="btn-save" id="m-save" onclick="saveModal()">저장</button>
+            </div>
+            <div class="saving" id="m-saving">저장 중...</div>
+        </div>
+    </div>
+
+    <!-- 이력 모달 -->
+    <div class="overlay" id="hist-modal">
+        <div class="modal">
+            <h3 id="h-title"></h3>
+            <div class="msub" id="h-sub"></div>
+            <div id="h-loading" class="state-box" style="padding:1.5rem 0;">
+                <div class="spinner"></div>
+            </div>
+            <div id="h-list" style="display:none;"></div>
+            <div class="modal-btns" style="margin-top:1rem;">
+                <button class="btn-cancel" onclick="closeHistModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec';
+    const STORES = ['본점', '영도', '마린시티', '도모헌', '베이커리'];
+    const PART_STORES = STORES.filter(store => store !== '베이커리');
+    const REPAIR_CATEGORIES = ['전체', '머신', '그라인더', '물 필터 장비', '기타 설비'];
+    const BAKERY_EQUIPMENT_CATEGORIES = ['냉장·냉동 설비', '발효·도우 관리 설비', '반죽·성형 장비', '베이킹·가열 장비'];
+    const BAKERY_REPAIR_CATEGORIES = ['전체', ...BAKERY_EQUIPMENT_CATEGORIES];
+    const STORE_MANAGER_LIMITS = {
+        '본점': 2,
+        '영도': 2,
+        '마린시티': 2,
+        '도모헌': 1,
+        '베이커리': 1
+    };
+
+    let activeMode = 'parts'; // 'parts' | 'repair'
+    const ADMIN_KEY = 'eq_admins_v1';
+    const SESSION_KEY = 'eq_session';
+    const UI_STATE_KEY = 'eq_ui_state';
+    const DATA_CACHE_KEY = 'eq_data_cache_v1';
+    const DATA_CACHE_TTL = 5 * 60 * 1000;
+    const SESSION_TTL = 60 * 60 * 1000;
+
+    const STORE_COLORS = {
+        '본점': {
+            bg: '#1A1916',
+            fg: '#FFFFFF'
+        },
+        '영도': {
+            bg: '#1B4F72',
+            fg: '#FFFFFF'
+        },
+        '마린시티': {
+            bg: '#1E8449',
+            fg: '#FFFFFF'
+        },
+        '도모헌': {
+            bg: '#784212',
+            fg: '#FFFFFF'
+        },
+        '베이커리': {
+            bg: '#B7791F',
+            fg: '#FFFFFF'
+        },
+    };
+    function storeBadgeStyle(store) {
+        const c = STORE_COLORS[store] || {
+            bg: '#e8f0fb',
+            fg: '#2d5a8e'
+        };
+        return `background:${c.bg};color:${c.fg}`;
+    }
+
+    let allData = null;
+    let bakeryEquipmentData = [];
+    let bakeryEquipmentLoaded = false;
+    let activeStore = '대시보드';
+    let activeFilter = null;
+    let editTarget = null;
+
+    // ── 날짜 유틸 ─────────────────────────────────────────────
+    function parseISO(val) {
+        if (!val || !String(val).trim())
+            return null;
+        const m = String(val).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m)
+            return null;
+        return new Date(+m[1], +m[2] - 1, +m[3]);
+    }
+    function fmt(iso) {
+        const d = parseISO(iso);
+        if (!d)
+            return '';
+        return `${d.getFullYear()}. ${d.getMonth() + 1}. ${d.getDate()}`;
+    }
+    function fmtCost(value) {
+        const raw = String(value || '').replace(/[^\d.-]/g, '');
+        const num = Number(raw);
+        if (!raw || Number.isNaN(num))
+            return '';
+        return num.toLocaleString('ko-KR');
+    }
+    function todayISO() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    function diffDays(a, b) {
+        const da = parseISO(a),
+            db = parseISO(b);
+        if (!da || !db)
+            return null;
+        return Math.round((db - da) / 86400000);
+    }
+    function addDays(iso, n) {
+        const d = parseISO(iso);
+        if (!d)
+            return '';
+        d.setDate(d.getDate() + n);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function status(nextISO) {
+        if (!nextISO || !nextISO.trim())
+            return {
+                cls: 'none',
+                days: null
+            };
+        const d = diffDays(todayISO(), nextISO);
+        if (d === null)
+            return {
+                cls: 'none',
+                days: null
+            };
+        if (d < 0)
+            return {
+                cls: 'overdue',
+                days: Math.abs(d)
+            };
+        if (d <= 7)
+            return {
+                cls: 'danger',
+                days: d
+            };
+        if (d <= 30)
+            return {
+                cls: 'warning',
+                days: d
+            };
+        return {
+            cls: 'ok',
+            days: d
+        };
+    }
+
+    function ddayBadge(st) {
+        const cfg = {
+            ok: {
+                bg: '#E8F5E9',
+                fg: '#2E7D32',
+                icon: '🟢',
+                label: '여유'
+            },
+            warning: {
+                bg: '#FFF3E0',
+                fg: '#EF6C00',
+                icon: '🟠',
+                label: '교체 예정'
+            },
+            danger: {
+                bg: '#FDECEA',
+                fg: '#C62828',
+                icon: '🔴',
+                label: '즉시 교체'
+            },
+            overdue: {
+                bg: '#F5F5F5',
+                fg: '#616161',
+                icon: '⚫',
+                label: '지남'
+            },
+            none: {
+                bg: '#FFF8E1',
+                fg: '#F57F17',
+                icon: '🟡',
+                label: '미입력'
+            },
+        };
+        const c = cfg[st.cls] || cfg.none;
+        const dayStr = st.days !== null ? ` (${st.days}일)` : '';
+        return `<span class="dday-badge" style="background:${c.bg};color:${c.fg};">${c.icon} ${c.label}${dayStr}</span>`;
+    }
+
+    function miniBadge(st, label) {
+        const cfg = {
+            ok: {
+                bg: '#E8F5E9',
+                fg: '#2E7D32'
+            },
+            warning: {
+                bg: '#FFF3E0',
+                fg: '#EF6C00'
+            },
+            danger: {
+                bg: '#FDECEA',
+                fg: '#C62828'
+            },
+            overdue: {
+                bg: '#F5F5F5',
+                fg: '#616161'
+            },
+            none: {
+                bg: '#FFF8E1',
+                fg: '#F57F17'
+            },
+        };
+        const c = cfg[st.cls] || cfg.none;
+        return `<span class="mini-badge" style="background:${c.bg};color:${c.fg};">${label}</span>`;
+    }
+
+    function loadAdmins() {
+        try {
+            return JSON.parse(localStorage.getItem(ADMIN_KEY)) || {};
+        } catch (e) {
+            return {};
+        }
+    }
+    function saveAdmins(d) {
+        try {
+            localStorage.setItem(ADMIN_KEY, JSON.stringify(d));
+        } catch (e) {}
+    }
+    let usersCache = [];
+    async function apiPost(payload) {
+        const res = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        return await res.json();
+    }
+    async function refreshUsers() {
+        if (!currentUser)
+            return [];
+        const json = await apiPost({
+            action: 'listUsers',
+            requesterId: currentUser.id
+        });
+        if (!json.success)
+            throw new Error(json.error);
+        usersCache = json.users || [];
+        return usersCache;
+    }
+    function needsUserDataView() {
+        return activeStore === '매장별담당자' || activeStore === '시스템관리자' || activeStore === '알림발송';
+    }
+    function loadCachedData() {
+        try {
+            const cached = JSON.parse(localStorage.getItem(DATA_CACHE_KEY));
+            if (!cached || !cached.data || Date.now() - cached.savedAt > DATA_CACHE_TTL)
+                return false;
+            allData = cached.data;
+            render();
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+    function saveDataCache(data) {
+        try {
+            localStorage.setItem(DATA_CACHE_KEY, JSON.stringify({
+                savedAt: Date.now(),
+                data
+            }));
+        } catch (e) {}
+    }
+    function getManagerLimit(store) {
+        return STORE_MANAGER_LIMITS[store] || 1;
+    }
+    function getStoreManagers(admins, store) {
+        const limit = getManagerLimit(store);
+        const raw = admins[store] || {};
+        let people = Array.isArray(raw.people) ? raw.people : [];
+        if (!people.length && (raw.name || raw.phone || raw.email || raw.userId)) {
+            people = [{
+                name: raw.name || '',
+                phone: raw.phone || '',
+                email: raw.email || '',
+                userId: raw.userId || ''
+            }];
+        }
+        people = people.slice(0, limit);
+        while (people.length < limit) {
+            people.push({
+                name: '',
+                phone: '',
+                email: '',
+                userId: ''
+            });
+        }
+        return people;
+    }
+    function getUserStore(user=currentUser) {
+        if (!user || user.role === 'admin')
+            return '';
+        if (user.store && STORES.includes(user.store))
+            return user.store;
+        const cached = usersCache.find(u => u.id === user.id);
+        return cached && STORES.includes(cached.store) ? cached.store : '';
+    }
+
+    // ── 사이드바 ──────────────────────────────────────────────
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebar-overlay').classList.toggle('open');
+    }
+    function closeSidebar() {
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebar-overlay').classList.remove('open');
+    }
+
+    // ── 데이터 로딩 ───────────────────────────────────────────
+    async function loadData(options = {}) {
+        const usedCache = options.preferCache && loadCachedData();
+        if (!usedCache)
+            showLoading();
+        try {
+            const res = await fetch(`${APPS_SCRIPT_URL}?action=getData`);
+            const json = await res.json();
+            if (!json.success)
+                throw new Error(json.error);
+            allData = json.data;
+            saveDataCache(allData);
+            activeFilter = null;
+            render();
+        } catch (e) {
+            if (!usedCache)
+                showError(e.message || '데이터를 불러오지 못했습니다.');
+            else
+                showToast('최신 데이터 갱신 실패: ' + (e.message || '네트워크 오류'));
+        }
+    }
+
+    // ── 렌더 ──────────────────────────────────────────────────
+    function render() {
+        const today = todayISO();
+        document.getElementById('date-chip').textContent = `기준 ${fmt(today)}`;
+        document.getElementById('sidebar-date').textContent = fmt(today);
+
+        document.getElementById('app').innerHTML = `<div id="store-content"></div>`;
+        renderStore();
+        updateSidebarActive();
+        saveUiState();
+    }
+
+    function toggleFilter(cls) {
+        activeFilter = (activeFilter === cls) ? null : cls;
+        renderStore();
+    }
+
+    function renderFilterPanel(items) {
+        const labels = {
+            danger: '🔴 위험 (D-7 이내)',
+            warning: '🟠 주의 (D-30 이내)',
+            ok: '🟢 정상',
+            none: '🟡 날짜 미입력'
+        };
+        document.getElementById('filter-panel-title').textContent = `${labels[activeFilter]} — ${items.length}건`;
+        if (!items.length) {
+            document.getElementById('filter-list').innerHTML = '<div style="font-size:12px;color:var(--muted);">해당 항목 없음</div>';
+            return;
+        }
+        document.getElementById('filter-list').innerHTML = items.map(it => `
+    <div class="filter-item">
+      <span class="filter-store-badge" style="${
+        storeBadgeStyle(it.store)}">${it.store}</span>
+      <span style="flex:1;font-weight:500;">${it.part}</span>
+      <span class="filter-device">${it.dev}</span>
+      ${ddayBadge(it.st)}
+    </div>`
+        ).join('');
+    }
+
+    function renderStore() {
+        const el = document.getElementById('store-content');
+        if (needsUserDataView() && !usersCache.length && currentUser) {
+            el.innerHTML = '<div class="state-box"><div class="spinner"></div><p>담당자 정보를 불러오는 중...</p></div>';
+            refreshUsers().then(() => renderStore()).catch(e => {
+                el.innerHTML = `<div class="state-box"><p>담당자 정보 로딩 실패<br><small>${e.message}</small></p></div>`;
+            });
+            return;
+        }
+        if (activeStore === '대시보드') {
+            el.innerHTML = renderDashboard();
+            return;
+        }
+        if (activeStore === '매장별담당자' && activeMode === 'settings') {
+            el.innerHTML = renderMySettings();
+            return;
+        }
+        if (activeStore === '매장별담당자') {
+            el.innerHTML = renderStoreManagers();
+            return;
+        }
+        if (activeStore === '알림발송') {
+            el.innerHTML = renderAlertSend();
+            return;
+        }
+        if (activeStore === '시스템관리자') {
+            el.innerHTML = renderSysAdmin();
+            return;
+        }
+        if (STORES.includes(activeStore) && activeMode === 'repair') {
+            renderRepairPage();
+            return;
+        }
+        if (activeStore === '베이커리') {
+            renderBakeryEquipmentPage();
+            return;
+        }
+        const sd = allData[activeStore] || {};
+        if (!Object.keys(sd).length) {
+            el.innerHTML = '<div class="state-box"><p>데이터가 없습니다.</p></div>';
+            return;
+        }
+        el.innerHTML = Object.entries(sd).map(([cat, devices]) => `
+    <div class="cat-block">
+      <div class="cat-title">${
+        cat}</div>
+      ${Object.entries(devices).map(([dev, parts]) => renderDevice(dev, parts)).join('')}
+    </div>
+  `
+
+        ).join('');
+    }
+
+    async function loadBakeryEquipment(force = false) {
+        if (bakeryEquipmentLoaded && !force)
+            return bakeryEquipmentData;
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=getBakeryEquipment`);
+        const json = await res.json();
+        if (!json.success)
+            throw new Error(json.error);
+        bakeryEquipmentData = json.items || [];
+        bakeryEquipmentLoaded = true;
+        return bakeryEquipmentData;
+    }
+
+    async function renderBakeryEquipmentPage() {
+        const el = document.getElementById('store-content');
+        el.innerHTML = '<div class="state-box"><div class="spinner"></div><p>베이커리 장비를 불러오는 중...</p></div>';
+        try {
+            await loadBakeryEquipment();
+            el.innerHTML = renderBakeryEquipmentList();
+        } catch (e) {
+            el.innerHTML = `<div class="state-box"><p>로딩 실패<br><small>${e.message}</small></p></div>`;
+        }
+    }
+
+    function getBakeryEquipmentItems() {
+        return bakeryEquipmentData;
+    }
+
+    function renderBakeryEquipmentList() {
+        const grouped = {};
+        BAKERY_EQUIPMENT_CATEGORIES.forEach(cat => grouped[cat] = []);
+        getBakeryEquipmentItems().forEach(item => {
+            const cat = BAKERY_EQUIPMENT_CATEGORIES.includes(item.category) ? item.category : BAKERY_EQUIPMENT_CATEGORIES[0];
+            grouped[cat].push(item);
+        });
+        const renderTable = (cat, items) => {
+            const rows = items.map((item, i) => `
+      <tr style="background:${i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'};">
+        <td style="padding:9px 12px;font-size:13px;font-weight:500;">${item.device || '-'}</td>
+        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${item.purchaseDate ? fmt(item.purchaseDate) : '<span class="date-empty">미입력</span>'}</td>
+        <td style="padding:9px 12px;font-size:13px;color:var(--muted);">${item.note || ''}</td>
+        <td style="padding:9px 12px;white-space:nowrap;text-align:right;">
+          <button onclick="openBakeryEquipmentModal(${item.id})" style="font-size:11px;color:#2d5a8e;background:none;border:1px solid #c8d8ee;border-radius:5px;padding:2px 7px;cursor:pointer;margin-right:4px;">수정</button>
+          <button onclick="deleteBakeryEquipment(${item.id})" style="font-size:11px;color:#c62828;background:none;border:1px solid #f0c0c0;border-radius:5px;padding:2px 7px;cursor:pointer;">삭제</button>
+        </td>
+      </tr>`).join('');
+            return `
+    <div style="margin-bottom:1.25rem;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:600;background:#f0f0ee;color:#1a1916;border-radius:10px;padding:2px 10px;">${cat}</span>
+        <span style="font-size:11px;color:var(--muted);">${items.length}건</span>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+          <colgroup>
+            <col style="width:32%;">
+            <col style="width:18%;">
+            <col style="width:34%;">
+            <col style="width:16%;">
+          </colgroup>
+          <thead>
+            <tr style="background:var(--surface2);">
+              <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">장비명</th>
+              <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">구매 일자</th>
+              <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">기타사항</th>
+              <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);">관리</th>
+            </tr>
+          </thead>
+          <tbody>${items.length ? rows : '<tr><td colspan="4" class="state-box" style="padding:1.5rem 1rem;">등록된 장비가 없습니다.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
+        };
+        return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:600;">📋 장비 및 설비 리스트</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">베이커리 · 베이커리장비 시트 기준</div>
+      </div>
+    </div>
+    ${BAKERY_EQUIPMENT_CATEGORIES.map(cat => renderTable(cat, grouped[cat])).join('')}`;
+    }
+
+    function openBakeryEquipmentModal(rowIndex) {
+        const item = getBakeryEquipmentItems().find(row => Number(row.id) === Number(rowIndex));
+        if (!item) {
+            showToast('수정할 장비를 찾을 수 없습니다.');
+            return;
+        }
+        const existing = document.getElementById('bakery-equipment-modal');
+        if (existing)
+            existing.remove();
+        const modal = document.createElement('div');
+        modal.id = 'bakery-equipment-modal';
+        modal.className = 'overlay open';
+        modal.innerHTML = `
+    <div class="modal" style="width:420px;">
+      <h3>📋 장비 및 설비 수정</h3>
+      <div class="msub">베이커리</div>
+      <label>카테고리 *</label>
+      <select id="b-category" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);">
+        ${BAKERY_EQUIPMENT_CATEGORIES.map(cat => `<option value="${cat}" ${item.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
+      </select>
+      <label>장비명 *</label>
+      <input type="text" id="b-device" value="${escAttr(item.device)}" placeholder="장비명">
+      <label>구매 일자</label>
+      <input type="date" id="b-purchase" value="${item.purchaseDate || ''}">
+      <label>기타사항</label>
+      <textarea id="b-note" placeholder="기타사항" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);min-height:70px;resize:vertical;font-family:var(--sans);">${escText(item.note)}</textarea>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeBakeryEquipmentModal()">취소</button>
+        <button class="btn-save" onclick="saveBakeryEquipment(${rowIndex})">저장</button>
+      </div>
+      <div class="saving" id="b-saving">저장 중...</div>
+    </div>`;
+        modal.addEventListener('click', e => {
+            if (e.target === modal)
+                closeBakeryEquipmentModal();
+        });
+        document.body.appendChild(modal);
+    }
+
+    function closeBakeryEquipmentModal() {
+        const modal = document.getElementById('bakery-equipment-modal');
+        if (modal)
+            modal.remove();
+    }
+
+    async function saveBakeryEquipment(rowIndex) {
+        const device = document.getElementById('b-device').value.trim();
+        const category = document.getElementById('b-category').value;
+        const purchaseDate = document.getElementById('b-purchase').value;
+        const note = document.getElementById('b-note').value.trim();
+        if (!device) {
+            showToast('장비명은 필수입니다.');
+            return;
+        }
+        document.getElementById('b-saving').style.display = 'block';
+        try {
+            const json = await apiPost({
+                action: 'updateBakeryEquipment',
+                rowIndex,
+                category,
+                device,
+                purchaseDate,
+                note
+            });
+            if (!json.success)
+                throw new Error(json.error);
+            closeBakeryEquipmentModal();
+            showToast('저장 완료');
+            await loadBakeryEquipment(true);
+            document.getElementById('store-content').innerHTML = renderBakeryEquipmentList();
+        } catch (e) {
+            document.getElementById('b-saving').style.display = 'none';
+            showToast('저장 실패: ' + e.message);
+        }
+    }
+
+    async function deleteBakeryEquipment(rowIndex) {
+        if (!confirm('이 장비를 삭제하시겠습니까?'))
+            return;
+        try {
+            const json = await apiPost({
+                action: 'deleteBakeryEquipment',
+                rowIndex
+            });
+            if (!json.success)
+                throw new Error(json.error);
+            showToast('삭제 완료');
+            await loadBakeryEquipment(true);
+            document.getElementById('store-content').innerHTML = renderBakeryEquipmentList();
+        } catch (e) {
+            showToast('삭제 실패: ' + e.message);
+        }
+    }
+
+    // ── 대시보드 ──────────────────────────────────────────────
+    function renderDashboard() {
+        const counts = {
+            danger: 0,
+            warning: 0,
+            ok: 0,
+            none: 0
+        };
+        const items = {
+            danger: [],
+            warning: [],
+            ok: [],
+            none: []
+        };
+        const storeCounts = {};
+        PART_STORES.forEach(store => {
+            storeCounts[store] = {
+                total: 0,
+                danger: 0,
+                warning: 0,
+                ok: 0,
+                none: 0
+            };
+            Object.values(allData[store] || {}).forEach(cat =>
+            Object.entries(cat).forEach(([dev, parts]) =>
+            parts.forEach(p => {
+                const st = status(p.next);
+                const cls = st.cls === 'overdue' ? 'danger' : st.cls;
+                counts[cls]++;
+                storeCounts[store].total++;
+                storeCounts[store][cls]++;
+                items[cls].push({
+                    store,
+                    dev,
+                    part: p.part,
+                    next: p.next,
+                    st
+                });
+            })
+            )
+            );
+        });
+
+        // 매장별 현황 바
+        const storeRows = PART_STORES.map(s => {
+            const sc = STORE_COLORS[s] || {
+                bg: '#1a1916',
+                fg: '#fff'
+            };
+            const st = storeCounts[s];
+            const total = st.total || 1;
+            const dangerPct = Math.round(st.danger / total * 100);
+            const warnPct = Math.round(st.warning / total * 100);
+            const okPct = Math.round(st.ok / total * 100);
+            const nonePct = Math.round(st.none / total * 100);
+            return `
+      <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:nowrap;">
+        <span style="font-size:12px;font-weight:600;border-radius:10px;padding:3px 12px;white-space:nowrap;background:${
+            sc.bg};color:${sc.fg};min-width:72px;text-align:center;">${s}</span>
+        <div style="flex:1;min-width:0;height:10px;border-radius:10px;overflow:hidden;background:#f0eeea;display:flex;">
+          ${
+            st.danger > 0 ? `<div style="width:${dangerPct}%;background:#C62828;"></div>` : ''}
+          ${st.warning > 0 ? `<div style="width:${warnPct}%;background:#EF6C00;"></div>` : ''}
+          ${st.ok > 0 ? `<div style="width:${okPct}%;background:#2E7D32;"></div>` : ''}
+          ${st.none > 0 ? `<div style="width:${nonePct}%;background:#ccc;"></div>` : ''}
+        </div>
+        <div style="display:flex;gap:16px;font-size:13px;font-family:var(--mono);white-space:nowrap;">
+          ${
+
+            st.danger > 0 ? `<span style="color:#C62828;">🔴 ${st.danger}</span>` : ''}
+          ${st.warning > 0 ? `<span style="color:#EF6C00;">🟠 ${st.warning}</span>` : ''}
+          ${st.ok > 0 ? `<span style="color:#2E7D32;">🟢 ${st.ok}</span>` : ''}
+          ${st.none > 0 ? `<span style="color:#aaa;">🟡 ${st.none}</span>` : ''}
+        </div>
+        <span style="font-size:12px;color:var(--muted);white-space:nowrap;margin-left:auto;">${
+            st.total}개</span>
+      </div>`
+            ;
+        }).join('');
+
+        // 지남 항목만 표시
+        const overdueItems = [];
+        PART_STORES.forEach(store => {
+            Object.values(allData[store] || {}).forEach(cat =>
+            Object.entries(cat).forEach(([dev, parts]) =>
+            parts.forEach(p => {
+                const st = status(p.next);
+                if (st.cls === 'overdue')
+                    overdueItems.push({
+                        store,
+                        dev,
+                        part: p.part,
+                        next: p.next,
+                        st
+                    });
+            })
+            )
+            );
+        });
+        overdueItems.sort((a, b) => b.st.days - a.st.days);
+
+        const overdueTable = overdueItems.length === 0
+        ? '<p style="font-size:12px;color:var(--muted);padding:.75rem 0;">교체일 경과 항목 없음 ✓</p>'
+        : `<table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:var(--surface2);">
+            <th style="font-size:13px;color:var(--muted);font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">매장</th>
+            <th style="font-size:13px;color:var(--muted);font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">부품명</th>
+            <th style="font-size:13px;color:var(--muted);font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">장비명</th>
+            <th style="font-size:13px;color:var(--muted);font-weight:500;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);">경과</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+
+
+
+
+
+
+
+
+        overdueItems.map((it, i) => `
+            <tr style="background:${i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'};cursor:pointer;" onclick="selectStore('${it.store}')">
+              <td style="padding:7px 8px;border-bottom:1px solid var(--border);">
+                <span style="font-size:12px;font-weight:600;border-radius:8px;padding:2px 8px;white-space:nowrap;${
+        storeBadgeStyle(it.store)}">${it.store}</span>
+              </td>
+              <td style="padding:7px 8px;border-bottom:1px solid var(--border);font-size:13px;font-weight:500;white-space:nowrap;">${
+        it.part}</td>
+              <td style="padding:7px 8px;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${it.dev}</td>
+              <td style="padding:7px 8px;border-bottom:1px solid var(--border);">
+                <span style="font-size:13px;font-weight:700;background:#F5F5F5;color:#616161;padding:2px 8px;border-radius:10px;white-space:nowrap;">⚫ ${
+        it.st.days}일 경과</span>
+              </td>
+            </tr>`
+        ).join('')}
+        </tbody>
+      </table>`
+
+        ;
+
+        const filterHtml = activeFilter ? `
+    <div class="filter-panel open" id="filter-panel" style="margin-top:1rem;">
+      <div class="filter-panel-title">
+        <span id="filter-panel-title"></span>
+        <button class="filter-close" onclick="toggleFilter(null)">✕ 닫기</button>
+      </div>
+      <div class="filter-list" id="filter-list"></div>
+    </div>`
+
+
+
+
+
+
+        : `
+    <div class="filter-panel" id="filter-panel" style="margin-top:1rem;">
+      <div class="filter-panel-title">
+        <span id="filter-panel-title"></span>
+        <button class="filter-close" onclick="toggleFilter(null)">✕ 닫기</button>
+      </div>
+      <div class="filter-list" id="filter-list"></div>
+    </div>`
+
+
+
+
+
+
+        ;
+
+        const total = counts.danger + counts.warning + counts.ok + counts.none;
+        const html = `
+    <div class="summary" style="margin-bottom:1.25rem;width:100%;">
+      <div class="s-card c-danger ${
+        activeFilter === 'danger' ? 'active-filter' : ''}" onclick="toggleFilter('danger')" style="padding:1.4rem 1.25rem;">
+        <div class="s-label">🔴 위험 (D-7 이내)</div>
+        <div class="s-num" style="font-size:42px;margin-top:4px;">${
+        counts.danger}</div>
+      </div>
+      <div class="s-card c-warn ${
+        activeFilter === 'warning' ? 'active-filter' : ''}" onclick="toggleFilter('warning')" style="padding:1.4rem 1.25rem;">
+        <div class="s-label">🟠 주의 (D-30 이내)</div>
+        <div class="s-num" style="font-size:42px;margin-top:4px;">${
+        counts.warning}</div>
+      </div>
+      <div class="s-card c-ok ${
+        activeFilter === 'ok' ? 'active-filter' : ''}" onclick="toggleFilter('ok')" style="padding:1.4rem 1.25rem;">
+        <div class="s-label">🟢 정상</div>
+        <div class="s-num" style="font-size:42px;margin-top:4px;">${
+        counts.ok}</div>
+      </div>
+      <div class="s-card ${
+        activeFilter === 'none' ? 'active-filter' : ''}" onclick="toggleFilter('none')" style="padding:1.4rem 1.25rem;">
+        <div class="s-label">🟡 날짜 미입력</div>
+        <div class="s-num" style="font-size:42px;margin-top:4px;color:var(--muted)">${
+        counts.none}</div>
+      </div>
+    </div>
+    ${
+
+        filterHtml}
+    <div style="display:flex;flex-direction:column;gap:14px;margin-top:1rem;width:100%;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;width:100%;box-sizing:border-box;">
+        <div style="font-size:15px;font-weight:600;margin-bottom:.25rem;">📋 매장별 현황</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:.75rem;">전체 ${
+
+
+        total}개 부품</div>
+        ${storeRows}
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;width:100%;box-sizing:border-box;">
+        <div style="font-size:15px;font-weight:600;margin-bottom:.25rem;">⚫ 즉시 확인 필요 <span style="font-size:13px;font-weight:400;color:var(--muted);">— 교체일 경과 항목</span></div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:.75rem;">경과 일수 많은 순 · 행 클릭 시 해당 매장으로 이동</div>
+        ${
+
+
+
+        overdueTable}
+      </div>
+    </div>
+  `
+
+
+        ;
+        setTimeout(() => {
+            if (activeFilter)
+                renderFilterPanel(items[activeFilter]);
+        }, 0);
+        return html;
+    }
+
+    // ── 매장별 담당자 ─────────────────────────────────────────
+    function renderStoreManagers() {
+        const cards = STORES.map(s => {
+            const people = usersCache.filter(u => u.role !== 'admin' && u.store === s).slice(0, getManagerLimit(s));
+            while (people.length < getManagerLimit(s)) {
+                people.push({
+                    name: '',
+                    phone: '',
+                    email: ''
+                });
+            }
+            const sc = STORE_COLORS[s] || {
+                bg: '#1a1916',
+                fg: '#fff'
+            };
+            const peopleHtml = people.map((person, idx) => `
+          <div style="padding:${idx === 0 ? '0' : '10px 0 0'};${idx === 0 ? '' : 'border-top:1px solid var(--border);'}">
+            <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:6px;">담당자 ${idx + 1}</div>
+            <div><span style="display:block;font-size:10px;color:var(--muted);margin-bottom:3px;">담당자 이름</span><strong>${person.name || '미입력'}</strong></div>
+            <div><span style="display:block;font-size:10px;color:var(--muted);margin-bottom:3px;margin-top:6px;">연락처</span>${person.phone || '미입력'}</div>
+            <div><span style="display:block;font-size:10px;color:var(--muted);margin-bottom:3px;margin-top:6px;">이메일</span>${person.email || '미입력'}</div>
+          </div>`
+            ).join('');
+            return `
+      <div class="admin-card" data-store="${s}">
+        <div class="store-badge" style="background:${sc.bg};color:${sc.fg};">${s}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
+          ${peopleHtml}
+        </div>
+      </div>`
+
+            ;
+        }).join('');
+        return `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:1rem;">담당자 정보는 담당자 설정에서 저장한 내용이 자동 반영됩니다.</div>
+    <div class="admin-grid">${
+        cards}</div>`;
+    }
+
+    // ── 알림 발송 (관리자 비밀번호 보호) ──────────────────────
+    const ADMIN_PW = '940321';
+    let pwVerified = false;
+
+    function renderAlertSend() {
+        if (!pwVerified) {
+            return `
+      <div class="alert-section" style="max-width:400px;">
+        <h3>🔐 관리자 인증</h3>
+        <p class="alert-desc" style="margin-top:6px;">알림 발송은 관리자만 사용할 수 있습니다.</p>
+        <div style="margin-top:1rem;">
+          <input type="password" id="pw-input" placeholder="관리자 비밀번호 입력"
+            style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);"
+            onkeydown="if(event.key==='Enter')checkPw()">
+          <button onclick="checkPw()" style="margin-top:8px;width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">
+            확인
+          </button>
+          <div id="pw-error" style="font-size:12px;color:#c62828;margin-top:6px;display:none;">비밀번호가 올바르지 않습니다.</div>
+        </div>
+      </div>`
+
+
+
+
+
+
+
+
+
+
+
+
+            ;
+        }
+        const today = todayISO();
+        const alerts = [];
+        PART_STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
+        Object.values(cat).forEach(dev => dev.forEach(p => {
+            const d = diffDays(today, p.next);
+            if (d !== null && d >= 0 && d <= 30)
+                alerts.push({
+                    store,
+                    part: p.part,
+                    next: p.next,
+                    dday: d
+                });
+        }))
+        ));
+        const alertItems = alerts.length === 0
+        ? '<p style="font-size:12px;color:var(--muted);padding:1rem 0;">D-30 이내 교체 대상 없음</p>'
+        : alerts.map(a => `
+        <div class="alert-item">
+          <span class="alert-store" style="${
+        storeBadgeStyle(a.store)}">${a.store}</span>
+          <span style="font-weight:500;flex:1;min-width:120px;">${a.part}</span>
+          <span style="font-size:11px;color:var(--muted);">${fmt(a.next)}</span>
+          <span class="dday-badge" style="background:#FFF3E0;color:#EF6C00;font-size:12px;">🟠 D-${a.dday}</span>
+        </div>`
+        ).join('');
+        return `
+    <div class="alert-section">
+      <h3>📧 교체 알림 발송</h3>
+      <p class="alert-desc">D-30 이내 교체 대상 부품을 매장 담당자 이메일로 발송합니다.</p>
+      <div>${
+
+
+        alertItems}</div>
+      ${alerts.length > 0 ? `<button class="alert-btn" id="send-btn" onclick="sendAlerts()">메일 발송 (${alerts.length}건)</button>` : ''}
+      <button onclick="pwVerified=false;renderStore();" style="margin-top:8px;margin-left:8px;padding:8px 16px;background:none;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--muted);cursor:pointer;">로그아웃</button>
+    </div>`
+
+        ;
+    }
+
+    function checkPw() {
+        const val = document.getElementById('pw-input').value;
+        if (val === ADMIN_PW) {
+            pwVerified = true;
+            renderStore();
+        } else {
+            document.getElementById('pw-error').style.display = 'block';
+        }
+    }
+
+    // ── 시스템 관리자 ──────────────────────────────────────────
+
+    // ── 수리 이력 페이지 ──────────────────────────────────────
+    let repairData = [];
+    let repairCategory = '전체';
+
+    function getRepairCategories() {
+        return activeStore === '베이커리' ? BAKERY_REPAIR_CATEGORIES : REPAIR_CATEGORIES;
+    }
+
+    async function renderRepairPage() {
+        if (!getRepairCategories().includes(repairCategory))
+            repairCategory = '전체';
+        const el = document.getElementById('store-content');
+        el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:600;">🔧 설비·시설물 수리 이력</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">${
+
+
+        activeStore}</div>
+      </div>
+      <button onclick="openRepairModal()" style="padding:7px 18px;background:var(--accent);color:#fff;border:none;border-radius:20px;font-size:13px;cursor:pointer;">+ 수리 이력 추가</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;" id="cat-tabs">
+      ${
+
+
+
+        getRepairCategories().map(c => `
+        <button onclick="filterRepair('${c}')"
+          style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:${c === repairCategory ? 'var(--accent)' : 'var(--surface)'};color:${c === repairCategory ? '#fff' : 'var(--muted)'};font-size:12px;cursor:pointer;">
+          ${c}
+        </button>`).join('')}
+    </div>
+    <div id="repair-list"><div class="state-box"><div class="spinner"></div></div></div>
+  `
+
+
+        ;
+        await loadRepairs();
+    }
+
+    async function loadRepairs() {
+        try {
+            const url = `${APPS_SCRIPT_URL}?action=getRepairs&store=${encodeURIComponent(activeStore)}&category=${encodeURIComponent(repairCategory)}`;
+            const res = await fetch(url);
+            const json = await res.json();
+            repairData = json.repairs || [];
+            renderRepairList();
+        } catch (e) {
+            document.getElementById('repair-list').innerHTML = `<div class="state-box"><p>로딩 실패: ${e.message}</p></div>`;
+        }
+    }
+
+    function filterRepair(cat) {
+        repairCategory = cat;
+        renderRepairPage();
+    }
+
+    function renderRepairList() {
+        const el = document.getElementById('repair-list');
+        if (!repairData.length) {
+            el.innerHTML = '<div class="state-box"><p>수리 이력이 없습니다.</p></div>';
+            return;
+        }
+
+        // 설비구분별 그룹핑
+        const groups = {};
+        repairData.forEach(r => {
+            const cat = r.category || (activeStore === '베이커리' ? BAKERY_EQUIPMENT_CATEGORIES[0] : '기타 설비');
+            if (!groups[cat])
+                groups[cat] = [];
+            groups[cat].push(r);
+        });
+
+        const catColors = {
+            '머신': {
+                bg: '#fce9e9',
+                fg: '#9e2a2a'
+            },
+            '그라인더': {
+                bg: '#e8f0fb',
+                fg: '#2d5a8e'
+            },
+            '물 필터 장비': {
+                bg: '#e8f5e9',
+                fg: '#2e7d32'
+            },
+            '기타 설비': {
+                bg: '#fff3e0',
+                fg: '#ef6c00'
+            },
+            '냉장·냉동 설비': {
+                bg: '#e8f0fb',
+                fg: '#2d5a8e'
+            },
+            '발효·도우 관리 설비': {
+                bg: '#fff3e0',
+                fg: '#8a4a00'
+            },
+            '반죽·성형 장비': {
+                bg: '#f0f0ee',
+                fg: '#1a1916'
+            },
+            '베이킹·가열 장비': {
+                bg: '#fce9e9',
+                fg: '#9e2a2a'
+            },
+        };
+
+        el.innerHTML = Object.entries(groups).map(([cat, items]) => {
+            const c = catColors[cat] || {
+                bg: '#f5f5f5',
+                fg: '#616161'
+            };
+            const rows = items.map((r, i) => `
+      <tr style="background:${i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'};">
+        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${fmt(r.date)}</td>
+        <td style="padding:9px 12px;font-size:13px;font-weight:500;">${r.device}</td>
+        <td style="padding:9px 12px;font-size:13px;color:var(--muted);">${r.cause}</td>
+        <td style="padding:9px 12px;font-size:13px;">${r.content}</td>
+        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);text-align:left;white-space:nowrap;">${fmtCost(r.cost)}</td>
+        <td style="padding:9px 12px;font-size:13px;color:var(--muted);">${r.manager}</td>
+        <td style="padding:9px 12px;white-space:nowrap;text-align:right;">
+          <button onclick="openRepairModal(${
+            r.id})" style="font-size:11px;color:#2d5a8e;background:none;border:1px solid #c8d8ee;border-radius:5px;padding:2px 7px;cursor:pointer;margin-right:4px;">수정</button>
+          <button onclick="deleteRepairRow(${
+            r.id})" style="font-size:11px;color:#c62828;background:none;border:1px solid #f0c0c0;border-radius:5px;padding:2px 7px;cursor:pointer;">삭제</button>
+        </td>
+      </tr>`
+
+            ).join('');
+            return `
+      <div style="margin-bottom:1.25rem;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:11px;font-weight:600;background:${
+
+            c.bg};color:${c.fg};border-radius:10px;padding:2px 10px;">${cat}</span>
+          <span style="font-size:11px;color:var(--muted);">${items.length}건</span>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+            <colgroup>
+              <col style="width:13%;">
+              <col style="width:12.5%;">
+              <col style="width:14.5%;">
+              <col style="width:27.5%;">
+              <col style="width:14%;">
+              <col style="width:13%;">
+              <col style="width:5.5%;">
+            </colgroup>
+            <thead>
+              <tr style="background:var(--surface2);">
+                <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">날짜</th>
+                <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">설비명</th>
+                <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">원인</th>
+                <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">수리 내용</th>
+                <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">비용</th>
+                <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">담당자</th>
+                <th style="border-bottom:1px solid var(--border);"></th>
+              </tr>
+            </thead>
+            <tbody>${
+
+
+
+
+
+
+
+
+
+
+
+
+            rows}</tbody>
+          </table>
+        </div>
+      </div>`
+
+
+            ;
+        }).join('');
+    }
+
+    async function deleteRepairRow(rowIndex) {
+        if (!confirm('이 수리 이력을 삭제하시겠습니까?'))
+            return;
+        try {
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'deleteRepair',
+                    rowIndex
+                })
+            });
+            const json = await res.json();
+            if (!json.success)
+                throw new Error(json.error);
+            showToast('삭제 완료');
+            await loadRepairs();
+            renderRepairList();
+        } catch (e) {
+            showToast('삭제 실패: ' + e.message);
+        }
+    }
+
+    // ── 수리 이력 추가 모달 ───────────────────────────────────
+    let repairModal = null;
+    let editingRepairId = null;
+
+    function openRepairModal(rowIndex=null) {
+        const editingRepair = rowIndex ? repairData.find(r => Number(r.id) === Number(rowIndex)) : null;
+        editingRepairId = editingRepair ? editingRepair.id : null;
+        // 모달 동적 생성
+        const existing = document.getElementById('repair-modal');
+        if (existing)
+            existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'repair-modal';
+        modal.className = 'overlay open';
+        modal.innerHTML = `
+    <div class="modal" style="width:440px;">
+      <h3>🔧 수리 이력 ${editingRepair ? '수정' : '추가'}</h3>
+      <div class="msub">${
+
+        activeStore}</div>
+      <label>날짜 *</label>
+      <input type="date" id="r-date" value="${
+        editingRepair ? editingRepair.date : todayISO()}">
+      <label>설비 구분 *</label>
+      <select id="r-cat" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);">
+        ${getRepairCategories().filter(c => c !== '전체').map(c => `<option value="${c}" ${editingRepair?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+      </select>
+      <label>설비명 / 장비명 *</label>
+      <input type="text" id="r-device" placeholder="예: 빅토리아 아르두이노 블랙이글 매버릭" value="${editingRepair ? escAttr(editingRepair.device) : ''}">
+      <label>원인</label>
+      <input type="text" id="r-cause" placeholder="예: 누수 발생, 소음 발생" value="${editingRepair ? escAttr(editingRepair.cause) : ''}">
+      <label>수리 내용</label>
+      <textarea id="r-content" placeholder="수리 내용을 입력하세요" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);min-height:70px;resize:vertical;font-family:var(--sans);">${editingRepair ? escText(editingRepair.content) : ''}</textarea>
+      <label>비용</label>
+      <input type="text" id="r-cost" inputmode="numeric" placeholder="예: 50000" value="${editingRepair ? fmtCost(editingRepair.cost) : ''}" oninput="formatRepairCostInput(this)">
+      <label>담당자</label>
+      <input type="text" id="r-manager" placeholder="담당자 이름" value="${editingRepair ? escAttr(editingRepair.manager) : ''}">
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeRepairModal()">취소</button>
+        <button class="btn-save" onclick="saveRepair()">저장</button>
+      </div>
+      <div class="saving" id="r-saving">저장 중...</div>
+    </div>
+  `
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        ;
+        modal.addEventListener('click', e => {
+            if (e.target === modal)
+                closeRepairModal();
+        });
+        document.body.appendChild(modal);
+    }
+
+    function closeRepairModal() {
+        const m = document.getElementById('repair-modal');
+        if (m)
+            m.remove();
+        editingRepairId = null;
+    }
+
+    function formatRepairCostInput(input) {
+        input.value = fmtCost(input.value);
+    }
+
+    async function postWithActionFallback(actions, payload) {
+        let lastJson = null;
+        for (const action of actions) {
+            const res = await fetch(`${APPS_SCRIPT_URL}?action=${encodeURIComponent(action)}`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    ...payload,
+                    action
+                })
+            });
+            const json = await res.json();
+            lastJson = json;
+            const message = String(json.error || json.message || '').toLowerCase();
+            const isUnknownAction = json.success === false && message.includes('unknown action');
+            if (!isUnknownAction)
+                return json;
+        }
+        return lastJson;
+    }
+
+    async function saveRepair() {
+        const date = document.getElementById('r-date').value;
+        const cat = document.getElementById('r-cat').value;
+        const device = document.getElementById('r-device').value.trim();
+        const cause = document.getElementById('r-cause').value.trim();
+        const content = document.getElementById('r-content').value.trim();
+        const cost = document.getElementById('r-cost').value.replace(/[^\d.-]/g, '').trim();
+        const manager = document.getElementById('r-manager').value.trim();
+        if (!date || !device) {
+            showToast('날짜와 설비명은 필수입니다.');
+            return;
+        }
+        document.getElementById('r-saving').style.display = 'block';
+        try {
+            const payload = {
+                id: editingRepairId,
+                rowIndex: editingRepairId,
+                store: activeStore,
+                category: cat,
+                device,
+                date,
+                cause,
+                content,
+                cost,
+                manager
+            };
+            const json = editingRepairId
+                ? await postWithActionFallback(['updateRepair', 'editRepair'], payload)
+                : await postWithActionFallback(['addRepair', 'saveRepair', 'createRepair'], payload);
+            if (!json.success)
+                throw new Error(json.error);
+            const wasEditing = Boolean(editingRepairId);
+            closeRepairModal();
+            showToast(wasEditing ? '수리 이력이 수정되었습니다 ✓' : '수리 이력이 추가되었습니다 ✓');
+            await loadRepairs();
+            renderRepairList();
+        } catch (e) {
+            document.getElementById('r-saving').style.display = 'none';
+            showToast('저장 실패: ' + e.message);
+        }
+    }
+
+    // ── 담당자 설정 (admin 전용) ─────────────────────────────
+    function renderMySettings() {
+        if (!currentUser)
+            return '<div class="state-box"><p>로그인이 필요합니다.</p></div>';
+        const user = usersCache.find(u => u.id === currentUser.id) || currentUser;
+        return `
+    <div style="max-width:500px;">
+      <div style="font-size:16px;font-weight:600;margin-bottom:.5rem;">⚙️ 내 정보 설정</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:1.25rem;">로그인 계정 아이디: <strong>${currentUser.id}</strong>${user.store ? ' · ' + user.store : ''}</div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;margin-bottom:1rem;">
+        <div class="admin-field"><label>이름</label><input type="text" id="my-name" value="${escAttr(user.name)}" placeholder="이름 입력"></div>
+        <div class="admin-field"><label>연락처</label><input type="text" id="my-phone" value="${escAttr(user.phone)}" placeholder="010-0000-0000"></div>
+        <div class="admin-field"><label>이메일</label><input type="email" id="my-email" value="${escAttr(user.email)}" placeholder="email@example.com"></div>
+        <button onclick="saveMyInfo()" style="width:100%;margin-top:10px;padding:7px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">내 정보 저장</button>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:.75rem;">🔒 비밀번호 변경</div>
+        <div class="admin-field"><label>현재 비밀번호</label><input type="password" id="pw-old" placeholder="현재 비밀번호"></div>
+        <div class="admin-field"><label>새 비밀번호</label><input type="password" id="pw-new" placeholder="새 비밀번호 (4자 이상)"></div>
+        <div class="admin-field"><label>새 비밀번호 확인</label><input type="password" id="pw-new2" placeholder="새 비밀번호 재입력"></div>
+        <button onclick="changePassword()" style="width:100%;margin-top:10px;padding:7px;background:#2d5a8e;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">비밀번호 변경</button>
+        <div id="pw-msg" style="font-size:11px;margin-top:6px;display:none;"></div>
+      </div>
+    </div>`
+
+
+
+
+
+
+
+
+        ;
+    }
+
+    async function saveMyInfo() {
+        if (!currentUser)
+            return;
+        try {
+            const json = await apiPost({
+                action: 'updateMyProfile',
+                id: currentUser.id,
+                name: document.getElementById('my-name').value.trim(),
+                phone: document.getElementById('my-phone').value.trim(),
+                email: document.getElementById('my-email').value.trim()
+            });
+            if (!json.success)
+                throw new Error(json.error);
+            currentUser = json.user;
+            try {
+                const session = JSON.parse(localStorage.getItem(SESSION_KEY)) || {};
+                localStorage.setItem(SESSION_KEY, JSON.stringify({
+                    ...session,
+                    userId: currentUser.id,
+                    user: currentUser,
+                    expiry: Date.now() + SESSION_TTL
+                }));
+            } catch (e) {}
+            await refreshUsers();
+            showToast('내 정보 저장 완료');
+        } catch (e) {
+            showToast('저장 실패: ' + e.message);
+        }
+    }
+
+    async function changePassword() {
+        const oldPw = document.getElementById('pw-old').value;
+        const newPw = document.getElementById('pw-new').value;
+        const newPw2 = document.getElementById('pw-new2').value;
+        const msg = document.getElementById('pw-msg');
+        const show = (text, ok) => {
+            msg.style.display = 'block';
+            msg.style.color = ok ? '#2e7d32' : '#c62828';
+            msg.textContent = text;
+        };
+        if (!currentUser)
+            return show('로그인 정보 없음', false);
+        if (newPw.length < 4)
+            return show('새 비밀번호는 4자 이상이어야 합니다.', false);
+        if (newPw !== newPw2)
+            return show('새 비밀번호가 일치하지 않습니다.', false);
+        try {
+            const user = usersCache.find(u => u.id === currentUser.id) || currentUser;
+            const json = await apiPost({
+                action: 'updateMyProfile',
+                id: currentUser.id,
+                name: user.name || '',
+                phone: user.phone || '',
+                email: user.email || '',
+                oldPw,
+                newPw
+            });
+            if (!json.success)
+                throw new Error(json.error);
+            currentUser = json.user;
+            try {
+                const session = JSON.parse(localStorage.getItem(SESSION_KEY)) || {};
+                localStorage.setItem(SESSION_KEY, JSON.stringify({
+                    ...session,
+                    userId: currentUser.id,
+                    user: currentUser,
+                    expiry: Date.now() + SESSION_TTL
+                }));
+            } catch (e) {}
+            await refreshUsers();
+            document.getElementById('pw-old').value = '';
+            document.getElementById('pw-new').value = '';
+            document.getElementById('pw-new2').value = '';
+            show('비밀번호가 변경되었습니다.', true);
+        } catch (e) {
+            show(e.message, false);
+        }
+    }
+
+    function renderSysAdmin() {
+        const users = getUsers();
+        const isAdmin = currentUser && currentUser.id === 'admin';
+
+        const userRows = users.map((u, i) => {
+            const assignedStore = u.role === 'admin' ? '-' : (u.store || getUserStore(u) || '-');
+            return `
+    <tr style="background:${i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'};">
+      <td style="padding:8px 12px;font-size:13px;font-weight:500;">${u.id}</td>
+      <td style="padding:8px 12px;font-size:13px;">${assignedStore}</td>
+      <td style="padding:8px 12px;font-size:13px;">${u.name || '-'}</td>
+      <td style="padding:8px 12px;font-size:13px;">${u.email || '-'}</td>
+      <td style="padding:8px 12px;font-size:12px;">
+        <span style="background:${
+            u.role === 'admin' ? '#1a1916' : '#909288'};color:#fff;border-radius:10px;padding:2px 8px;">${u.role === 'admin' ? '관리자' : '담당자'}</span>
+      </td>
+      <td style="padding:8px 12px;white-space:nowrap;">
+        ${
+
+            u.id !== 'admin' && isAdmin ? `<button onclick="resetUserPassword('${esc(u.id)}')" style="font-size:11px;color:#2d5a8e;background:none;border:1px solid #c8d8ee;border-radius:5px;padding:2px 8px;cursor:pointer;margin-right:4px;">비밀번호 재설정</button><button onclick="deleteUser('${esc(u.id)}')" style="font-size:11px;color:#c62828;background:none;border:1px solid #f0c0c0;border-radius:5px;padding:2px 8px;cursor:pointer;">삭제</button>` : ''}
+      </td>
+    </tr>`
+
+            ;
+        }).join('');
+
+        const addForm = isAdmin ? `
+    <div style="background:var(--bg);border-radius:var(--r);padding:1.1rem 1.25rem;margin-top:1rem;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:.75rem;">새 담당자 등록</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <input type="text" id="new-uid" placeholder="아이디" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);">
+        <input type="password" id="new-upw" placeholder="비밀번호" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);">
+        <select id="new-ustore" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);">
+          <option value="">담당 매장 미지정</option>
+          ${
+
+
+
+
+
+
+        STORES.map(s => `<option value="${s}">${s}</option>`).join('')}
+        </select>
+        <input type="text" id="new-uname" placeholder="이름" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);">
+        <input type="email" id="new-uemail" placeholder="이메일" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);">
+        <input type="text" id="new-uphone" placeholder="연락처" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);">
+      </div>
+      <button onclick="addUser()" style="padding:7px 20px;background:#1a1916;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">등록</button>
+      <div id="user-msg" style="font-size:11px;margin-top:6px;display:none;"></div>
+    </div>`
+
+
+
+
+
+
+        : '<p style="font-size:12px;color:var(--muted);margin-top:1rem;">담당자 등록은 관리자만 가능합니다.</p>';
+
+        return `
+    <div style="max-width:700px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;margin-bottom:1rem;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:.25rem;">🔐 시스템 관리자</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:1rem;">관리자: 이언주 · eonju51@momos.co.kr · momosretail.github.io/equipmentmanagement</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:.75rem;">등록된 사용자</div>
+        <table style="width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+          <thead>
+            <tr style="background:var(--surface2);">
+              <th style="padding:8px 12px;font-size:12px;color:var(--muted);font-weight:500;text-align:left;border-bottom:1px solid var(--border);">아이디</th>
+              <th style="padding:8px 12px;font-size:12px;color:var(--muted);font-weight:500;text-align:left;border-bottom:1px solid var(--border);">담당 매장</th>
+              <th style="padding:8px 12px;font-size:12px;color:var(--muted);font-weight:500;text-align:left;border-bottom:1px solid var(--border);">이름</th>
+              <th style="padding:8px 12px;font-size:12px;color:var(--muted);font-weight:500;text-align:left;border-bottom:1px solid var(--border);">이메일</th>
+              <th style="padding:8px 12px;font-size:12px;color:var(--muted);font-weight:500;text-align:left;border-bottom:1px solid var(--border);">권한</th>
+              <th style="padding:8px 12px;border-bottom:1px solid var(--border);"></th>
+            </tr>
+          </thead>
+          <tbody>${
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        userRows}</tbody>
+        </table>
+        ${
+        addForm}
+      </div>
+    </div>`
+
+        ;
+    }
+
+    async function addUser() {
+        const id = document.getElementById('new-uid').value.trim();
+        const pw = document.getElementById('new-upw').value.trim();
+        const store = document.getElementById('new-ustore').value;
+        const name = document.getElementById('new-uname').value.trim();
+        const email = document.getElementById('new-uemail').value.trim();
+        const phone = document.getElementById('new-uphone').value.trim();
+        const msg = document.getElementById('user-msg');
+        if (!id || !pw) {
+            msg.style.display = 'block';
+            msg.style.color = '#c62828';
+            msg.textContent = '아이디와 비밀번호는 필수입니다.';
+            return;
+        }
+        try {
+            const json = await apiPost({
+                action: 'addUser',
+                adminId: currentUser.id,
+                id,
+                pw,
+                store,
+                name,
+                email,
+                phone
+            });
+            if (!json.success)
+                throw new Error(json.error);
+            await refreshUsers();
+            msg.style.display = 'block';
+            msg.style.color = '#2e7d32';
+            msg.textContent = '등록 완료!';
+            setTimeout(() => renderStore(), 500);
+        } catch (e) {
+            msg.style.display = 'block';
+            msg.style.color = '#c62828';
+            msg.textContent = e.message || '등록 실패';
+        }
+    }
+
+    async function deleteUser(id) {
+        if (!confirm(`'${id}' 계정을 삭제하시겠습니까?`))
+            return;
+        try {
+            const json = await apiPost({
+                action: 'deleteUser',
+                adminId: currentUser.id,
+                id
+            });
+            if (!json.success)
+                throw new Error(json.error);
+            await refreshUsers();
+            renderStore();
+            showToast(`${id} 계정 삭제 완료`);
+        } catch (e) {
+            showToast('삭제 실패: ' + e.message);
+        }
+    }
+
+    async function resetUserPassword(id) {
+        if (!currentUser || currentUser.id !== 'admin') {
+            showToast('관리자만 변경할 수 있습니다.');
+            return;
+        }
+        const newPw = prompt(`'${id}' 계정의 새 비밀번호를 입력하세요.`, '');
+        if (newPw === null)
+            return;
+        const pw = newPw.trim();
+        if (pw.length < 4) {
+            showToast('비밀번호는 4자 이상이어야 합니다.');
+            return;
+        }
+        try {
+            const json = await apiPost({
+                action: 'resetUserPassword',
+                adminId: currentUser.id,
+                id,
+                pw
+            });
+            if (!json.success)
+                throw new Error(json.error);
+            await refreshUsers();
+            showToast(`${id} 비밀번호 변경 완료`);
+        } catch (e) {
+            showToast('변경 실패: ' + e.message);
+        }
+    }
+
+    function renderDevice(dev, parts) {
+        const badges = parts.map(p => {
+            const st = status(p.next);
+            const dayStr = st.days !== null ? ` (${st.days}일)` : '';
+            return miniBadge(st, p.part + dayStr);
+        }).join('');
+        const rows = parts.map(p => {
+            const st = status(p.next);
+            return `<tr>
+      <td><span class="part-name">${p.part}</span><span class="part-sub">${p.interval}개월 주기</span></td>
+      <td><span class="part-interval">${p.interval}개월</span></td>
+      <td style="font-family:var(--sans);font-size:13px;">${p.last ? fmt(p.last) : '<span class="date-empty">미입력</span>'}</td>
+      <td style="font-family:var(--sans);font-size:13px;">${p.next ? fmt(p.next) : '<span class="date-empty">미입력</span>'}</td>
+      <td>${ddayBadge(st)}</td>
+      <td>${p.note ? `<span class="note-text">${p.note}` : ''}</span></td>
+      <td style="white-space:nowrap;">
+        <button class="edit-btn" onclick="openModal('${
+            activeStore}','${esc(dev)}','${esc(p.part)}',${p.interval},'${p.last || ''}','${p.next || ''}')">수정</button>
+        <button class="hist-btn" onclick="openHistModal('${activeStore}','${esc(dev)}','${esc(p.part)}')">이력</button>
+      </td>
+    </tr>`
+
+            ;
+        }).join('');
+        // 모바일 카드형
+        const mobileCards = parts.map(p => {
+            const st = status(p.next);
+            return `<div style="padding:10px 12px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:13px;font-weight:600;">${
+            p.part}</span>
+        ${ddayBadge(st)}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">${
+            p.interval}개월 주기${p.next ? ' · 다음 교체: ' + fmt(p.next) : ''}</div>
+      ${p.note ? `<div style="font-size:11px;color:var(--muted);font-style:italic;margin-bottom:6px;">${p.note}</div>` : ''}
+      <div style="display:flex;gap:6px;">
+        <button class="edit-btn" onclick="openModal('${
+            activeStore}','${esc(dev)}','${esc(p.part)}',${p.interval},'${p.last || ''}','${p.next || ''}')">수정</button>
+        <button class="hist-btn" onclick="openHistModal('${activeStore}','${esc(dev)}','${esc(p.part)}')">이력</button>
+      </div>
+    </div>`
+
+            ;
+        }).join('');
+
+        return `
+    <div class="device-block">
+      <div class="device-header">
+        <span class="device-name">${
+
+        dev}</span>
+        <div class="device-status">${badges}</div>
+      </div>
+      <table class="parts-table">
+        <thead><tr>
+          <th>부품명</th><th>주기</th><th>마지막 교체일자</th><th>다음 교체일자</th><th>교체까지</th><th>기타사항</th><th>관리</th>
+        </tr></thead>
+        <tbody>${
+
+
+
+
+        rows}</tbody>
+      </table>
+      <div class="mobile-parts">${
+        mobileCards}</div>
+    </div>`
+        ;
+    }
+
+    function renderAdmin() {
+        const admins = loadAdmins();
+        const today = todayISO();
+        const alerts = [];
+        PART_STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
+        Object.values(cat).forEach(dev => dev.forEach(p => {
+            const d = diffDays(today, p.next);
+            if (d !== null && d >= 0 && d <= 30)
+                alerts.push({
+                    store,
+                    part: p.part,
+                    next: p.next,
+                    dday: d
+                });
+        }))
+        ));
+
+        const cards = STORES.map(s => {
+            const a = admins[s] || {};
+            const sc = STORE_COLORS[s] || {
+                bg: '#1a1916',
+                fg: '#fff'
+            };
+            return `
+      <div class="admin-card" data-store="${s}">
+        <div class="store-badge" style="background:${sc.bg};color:${sc.fg};">${s}</div>
+        <div class="admin-field"><label>담당자 이름</label><input type="text" class="a-name" placeholder="이름 입력" value="${a.name || ''}"></div>
+        <div class="admin-field"><label>연락처</label><input type="text" class="a-phone" placeholder="010-0000-0000" value="${a.phone || ''}"></div>
+        <div class="admin-field"><label>이메일</label><input type="email" class="a-email" placeholder="email@example.com" value="${a.email || ''}"></div>
+        <button class="admin-save-btn" onclick="saveAdmin('${s}')">저장</button>
+      </div>`
+            ;
+        }).join('');
+
+        const alertItems = alerts.length === 0
+        ? '<p style="font-size:12px;color:var(--muted);padding:1rem 0;">D-30 이내 교체 대상 없음</p>'
+        : alerts.map(a => `
+        <div class="alert-item">
+          <span class="alert-store" style="${
+        storeBadgeStyle(a.store)}">${a.store}</span>
+          <span style="font-weight:500;flex:1;min-width:120px;">${a.part}</span>
+          <span style="font-size:11px;color:var(--muted);">${fmt(a.next)}</span>
+          <span class="dday-badge" style="background:#FFF3E0;color:#EF6C00;font-size:12px;">🟠 D-${a.dday}</span>
+        </div>`
+        ).join('');
+
+        return `
+    <div class="admin-grid">${cards}</div>
+    <div class="alert-section">
+      <h3>교체 알림 발송</h3>
+      <p class="alert-desc">D-30 이내 교체 대상 부품을 매장 담당자 이메일로 발송합니다.</p>
+      <div>${
+
+
+        alertItems}</div>
+      ${alerts.length > 0 ? `<button class="alert-btn" id="send-btn" onclick="sendAlerts()">메일 발송 (${alerts.length}건)</button>` : ''}
+    </div>`
+        ;
+    }
+
+    function saveAdmin(store) {
+        const card = document.querySelector(`.admin-card[data-store="${store}"]`);
+        const admins = loadAdmins();
+        admins[store] = {
+            name: card.querySelector('.a-name').value.trim(),
+            phone: card.querySelector('.a-phone').value.trim(),
+            email: card.querySelector('.a-email').value.trim(),
+        };
+        saveAdmins(admins);
+        showToast(`${store} 담당자 정보 저장 완료`);
+    }
+
+    async function sendAlerts() {
+        const btn = document.getElementById('send-btn');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '발송 중...';
+        }
+        const byStore = {};
+        PART_STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
+        Object.values(cat).forEach(dev => dev.forEach(p => {
+            const d = diffDays(todayISO(), p.next);
+            if (d !== null && d >= 0 && d <= 30) {
+                if (!byStore[store])
+                    byStore[store] = [];
+                byStore[store].push({
+                    part: p.part,
+                    next: p.next,
+                    dday: d
+                });
+            }
+        }))
+        ));
+        let sent = 0,
+            failed = 0;
+        for (const [store, parts] of Object.entries(byStore)) {
+            const recipients = usersCache
+                .filter(user => user.role !== 'admin' && user.store === store)
+                .map(user => user.email)
+                .filter(Boolean);
+            if (!recipients.length) {
+                failed++;
+                continue;
+            }
+            const partLines = parts.map(p =>
+            `교체해야 할 부품명 : ${p.part}\n만료 예정일 : ${fmt(p.next)}\n남은 기간 : D-${p.dday}`
+            ).join('\n\n');
+            try {
+                const res = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'sendMail',
+                        to: recipients.join(','),
+                        subject: '[확인 요청] 장비 부품 교체 주기 경과 예정 안내',
+                        body: `안녕하세요, 매장에서 사용 중인 장비의 부품 교체 시기가 도래하여 확인 요청드립니다.\n\n${partLines}\n\n감사합니다.`
+                    })
+                });
+                const json = await res.json();
+                if (json.success)
+                    sent++;
+                else
+                    failed++;
+            } catch (e) {
+                failed++;
+            }
+        }
+        showToast(`발송 완료 ${sent}건${failed > 0 ? ' / 실패 ' + failed + '건' : ''}`);
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '메일 발송';
+        }
+    }
+
+    function toggleStoreMenu(store) {
+        document.getElementById('sub-담당자').classList.remove('open');
+        document.getElementById('arrow-담당자').classList.remove('open');
+        STORES.forEach(s => {
+            const sub = document.getElementById('sub-' + s);
+            const arrow = document.getElementById('arrow-' + s);
+            if (s === store) {
+                sub.classList.toggle('open');
+                arrow.classList.toggle('open');
+            } else {
+                sub.classList.remove('open');
+                if (arrow)
+                    arrow.classList.remove('open');
+            }
+        });
+    }
+
+    function toggleManagerMenu() {
+        STORES.forEach(s => {
+            const sub = document.getElementById('sub-' + s);
+            const arrow = document.getElementById('arrow-' + s);
+            if (sub)
+                sub.classList.remove('open');
+            if (arrow)
+                arrow.classList.remove('open');
+        });
+        document.getElementById('sub-담당자').classList.toggle('open');
+        document.getElementById('arrow-담당자').classList.toggle('open');
+        if (activeStore !== '매장별담당자')
+            selectManagerMode('list');
+    }
+
+    function selectManagerMode(mode) {
+        activeStore = '매장별담당자';
+        activeMode = mode;
+        activeFilter = null;
+        document.getElementById('topbar-title').textContent = mode === 'settings' ? '담당자 설정' : '매장별 담당자';
+        saveUiState();
+        document.getElementById('sub-담당자').classList.add('open');
+        document.getElementById('arrow-담당자').classList.add('open');
+        updateSidebarActive();
+        if (allData)
+            renderStore();
+        closeSidebar();
+    }
+
+    function selectStoreMode(store, mode) {
+        activeStore = store;
+        activeMode = mode;
+        activeFilter = null;
+        if (mode === 'repair' && !getRepairCategories().includes(repairCategory))
+            repairCategory = '전체';
+        const modeLabel = mode === 'repair' ? ' · 수리 이력' : (store === '베이커리' ? ' · 장비 및 설비 리스트' : ' · 부품 교체');
+        document.getElementById('topbar-title').textContent = store + modeLabel;
+        saveUiState();
+        updateSidebarActive();
+        if (allData)
+            renderStore();
+        closeSidebar();
+    }
+
+    function selectStore(s) {
+        activeStore = s;
+        activeMode = 'parts';
+        const titles = {
+            '대시보드': '대시보드',
+            '매장별담당자': '매장별 담당자',
+            '알림발송': '알림 발송',
+            '시스템관리자': '시스템 관리자'
+        };
+        document.getElementById('topbar-title').textContent = titles[s] || s;
+        activeFilter = null;
+        saveUiState();
+        updateSidebarActive();
+        if (allData)
+            render();
+        closeSidebar();
+    }
+
+    function updateSidebarActive() {
+        document.querySelectorAll('.nav-store,.nav-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.store === activeStore && !STORES.includes(activeStore));
+        });
+        document.querySelectorAll('.nav-sub').forEach(el => {
+            el.classList.toggle('active',
+            el.dataset.store === activeStore && el.dataset.mode === activeMode
+            );
+        });
+    }
+
+    function openModal(store, dev, part, interval, last, next) {
+        editTarget = {
+            store,
+            dev,
+            part,
+            interval
+        };
+        document.getElementById('m-title').textContent = part;
+        document.getElementById('m-sub').textContent = `${store} · ${dev} · ${interval}개월 주기`;
+        document.getElementById('m-last').value = last || '';
+        document.getElementById('m-next').value = next || '';
+        document.getElementById('m-manager').value = '';
+        document.getElementById('m-memo').value = '';
+        document.getElementById('m-save').disabled = false;
+        document.getElementById('m-saving').style.display = 'none';
+        document.getElementById('modal').classList.add('open');
+    }
+    function closeModal() {
+        document.getElementById('modal').classList.remove('open');
+        editTarget = null;
+    }
+    function autoCalc() {
+        const last = document.getElementById('m-last').value;
+        if (!last || !editTarget)
+            return;
+        document.getElementById('m-next').value = addDays(last, editTarget.interval * 30);
+    }
+    async function saveModal() {
+        if (!editTarget)
+            return;
+        const last = document.getElementById('m-last').value;
+        const next = document.getElementById('m-next').value;
+        const manager = document.getElementById('m-manager').value.trim();
+        const memo = document.getElementById('m-memo').value.trim();
+        document.getElementById('m-save').disabled = true;
+        document.getElementById('m-saving').style.display = 'block';
+        try {
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'updateRow',
+                    store: editTarget.store,
+                    device: editTarget.dev,
+                    part: editTarget.part,
+                    last,
+                    next,
+                    manager,
+                    memo
+                })
+            });
+            const json = await res.json();
+            if (!json.success)
+                throw new Error(json.error);
+            Object.values(allData[editTarget.store] || {}).forEach(cat => {
+                if (cat[editTarget.dev])
+                    cat[editTarget.dev].forEach(p => {
+                        if (p.part === editTarget.part) {
+                            p.last = last;
+                            p.next = next;
+                        }
+                    });
+            });
+            closeModal();
+            render();
+            showToast('저장 완료 ✓');
+        } catch (e) {
+            document.getElementById('m-save').disabled = false;
+            document.getElementById('m-saving').style.display = 'none';
+            showToast('저장 실패: ' + e.message);
+        }
+    }
+
+    async function openHistModal(store, dev, part) {
+        document.getElementById('h-title').textContent = part;
+        document.getElementById('h-sub').textContent = `${store} · ${dev}`;
+        document.getElementById('h-loading').style.display = 'block';
+        document.getElementById('h-list').style.display = 'none';
+        document.getElementById('hist-modal').classList.add('open');
+        try {
+            const url = `${APPS_SCRIPT_URL}?action=getHistory&store=${encodeURIComponent(store)}&device=${encodeURIComponent(dev)}&part=${encodeURIComponent(part)}`;
+            const res = await fetch(url);
+            const json = await res.json();
+            const list = document.getElementById('h-list');
+            if (!json.success || !json.history.length) {
+                list.innerHTML = '<div class="hist-empty">아직 교체 이력이 없습니다.</div>';
+            } else {
+                list.innerHTML = json.history.map(h => `
+        <div class="hist-item">
+          <div class="hist-date">${
+                fmt(h.date)}</div>
+          ${h.manager ? `<div class="hist-manager">담당자: ${h.manager}</div>` : ''}
+          ${h.memo ? `<div class="hist-memo">${h.memo}</div>` : ''}
+        </div>`
+                ).join('');
+            }
+            document.getElementById('h-loading').style.display = 'none';
+            list.style.display = 'block';
+        } catch (e) {
+            document.getElementById('h-list').innerHTML = `<div class="hist-empty">불러오기 실패: ${e.message}</div>`;
+            document.getElementById('h-loading').style.display = 'none';
+            document.getElementById('h-list').style.display = 'block';
+        }
+    }
+    function closeHistModal() {
+        document.getElementById('hist-modal').classList.remove('open');
+    }
+
+    const esc = s => String(s).replace(/'/g, "\\'");
+    const escAttr = s => String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escText = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    function showLoading() {
+        document.getElementById('app').innerHTML = '<div class="state-box"><div class="spinner"></div><p>불러오는 중...</p></div>';
+    }
+    function showError(m) {
+        const detail = m === 'Failed to fetch'
+            ? '서버에 연결하지 못했습니다. Apps Script 배포 권한과 배포 URL을 확인해주세요.'
+            : m;
+        document.getElementById('app').innerHTML = `<div class="state-box"><p>로딩 실패<br><small>${detail}</small></p></div>`;
+    }
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    // ── 사용자 관리 ──────────────────────────────────────────
+    const DEFAULT_ADMIN = {
+        id: 'admin',
+        name: '이언주',
+        email: 'eonju51@momos.co.kr',
+        role: 'admin'
+    };
+    let currentUser = null;
+
+    function getUsers() {
+        return usersCache.length ? usersCache : [DEFAULT_ADMIN];
+    }
+    function saveUsers(users) {
+        usersCache = users || [];
+    }
+
+    function saveUiState() {
+        try {
+            localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+                activeStore,
+                activeMode,
+                activeFilter
+            }));
+        } catch (e) {}
+    }
+
+    function restoreUiState() {
+        try {
+            const state = JSON.parse(localStorage.getItem(UI_STATE_KEY));
+            if (!state)
+                return;
+            if (state.activeStore)
+                activeStore = state.activeStore;
+            if (state.activeMode)
+                activeMode = state.activeMode;
+            if ('activeFilter' in state)
+                activeFilter = state.activeFilter;
+        } catch (e) {}
+    }
+
+    function syncTitleFromState() {
+        const titles = {
+            '대시보드': '대시보드',
+            '매장별담당자': activeMode === 'settings' ? '담당자 설정' : '매장별 담당자',
+            '알림발송': '알림 발송',
+            '시스템관리자': '시스템 관리자'
+        };
+        const modeLabel = activeMode === 'repair' ? ' · 수리 이력' : (activeStore === '베이커리' ? ' · 장비 및 설비 리스트' : ' · 부품 교체');
+        document.getElementById('topbar-title').textContent = STORES.includes(activeStore)
+            ? activeStore + modeLabel
+            : (titles[activeStore] || activeStore);
+    }
+
+    async function restoreSession() {
+        try {
+            const session = JSON.parse(localStorage.getItem(SESSION_KEY));
+            if (!session || !session.userId || Date.now() > session.expiry) {
+                localStorage.removeItem(SESSION_KEY);
+                return false;
+            }
+
+            if (!session.user) {
+                localStorage.removeItem(SESSION_KEY);
+                return false;
+            }
+
+            currentUser = session.user;
+            localStorage.setItem(SESSION_KEY, JSON.stringify({
+                userId: currentUser.id,
+                user: currentUser,
+                expiry: Date.now() + SESSION_TTL
+            }));
+            restoreUiState();
+            syncTitleFromState();
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('login-error').style.display = 'none';
+            loadData({preferCache: true});
+            return true;
+        } catch (e) {
+            localStorage.removeItem(SESSION_KEY);
+            return false;
+        }
+    }
+
+    async function doLogin() {
+        const id = document.getElementById('login-id').value.trim();
+        const pw = document.getElementById('login-pw').value.trim();
+        const err = document.getElementById('login-error');
+        err.style.display = 'none';
+        if (!id || !pw) {
+            err.textContent = '아이디와 비밀번호를 입력해주세요.';
+            err.style.display = 'block';
+            return;
+        }
+        document.getElementById('login-screen').style.display = 'none';
+        restoreUiState();
+        syncTitleFromState();
+        if (!loadCachedData())
+            showLoading();
+        try {
+            const json = await apiPost({
+                action: 'login',
+                id,
+                pw
+            });
+            if (!json.success)
+                throw new Error(json.error);
+            currentUser = json.user;
+            const session = {
+                userId: currentUser.id,
+                user: currentUser,
+                expiry: Date.now() + SESSION_TTL
+            };
+            try {
+                localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+            } catch (e) {}
+            saveUiState();
+            loadData({preferCache: true});
+        } catch (e) {
+            currentUser = null;
+            try {
+                localStorage.removeItem(SESSION_KEY);
+            } catch (storageError) {}
+            err.textContent = e.message || '아이디 또는 비밀번호가 올바르지 않습니다.';
+            err.style.display = 'block';
+            document.getElementById('login-screen').style.display = 'flex';
+        }
+    }
+
+    function doLogout() {
+        currentUser = null;
+        try {
+            localStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem(UI_STATE_KEY);
+        } catch (e) {}
+        document.getElementById('login-id').value = '';
+        document.getElementById('login-pw').value = '';
+        document.getElementById('login-error').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'flex';
+        activeStore = '대시보드';
+        activeMode = 'parts';
+        activeFilter = null;
+        document.getElementById('topbar-title').textContent = '대시보드';
+        closeSidebar();
+    }
+
+    document.getElementById('modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget)
+            closeModal();
     });
-  }
-  var result = {success:true, data:data};
-  cache.put(DATA_CACHE_KEY, JSON.stringify(result), DATA_CACHE_SECONDS);
-  return result;
-}
-
-function getHistory(store, device, part) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HISTORY_SHEET_NAME);
-  if (!sheet) return {success:true, history:[]};
-  var rows = sheet.getDataRange().getValues();
-  var history = [];
-  for (var i = 1; i < rows.length; i++) {
-    if (rows[i][0] === store && rows[i][1] === device && rows[i][2] === part) {
-      history.push({
-        date: toDateStr(rows[i][3]),
-        manager: String(rows[i][4] || ''),
-        memo: String(rows[i][5] || ''),
-        recorded: String(rows[i][6] || '')
-      });
-    }
-  }
-  history.sort(function(a,b){ return b.date.localeCompare(a.date); });
-  return {success:true, history:history};
-}
-
-function updateRow(p) {
-  var store = p.store, device = p.device, part = p.part,
-      last = p.last, next = p.next, manager = p.manager || '', memo = p.memo || '';
-  if (!store || !device || !part) return {success:false, error:'필수 파라미터 누락'};
-
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) return {success:false, error:'setup()을 먼저 실행해주세요.'};
-
-  var now = nowStr_();
-  var rows = sheet.getDataRange().getValues();
-  var updated = false;
-  for (var i = 1; i < rows.length; i++) {
-    if (rows[i][0] === store && rows[i][2] === device && rows[i][3] === part) {
-      sheet.getRange(i + 1, 6).setValue(last || '');
-      sheet.getRange(i + 1, 7).setValue(next || '');
-      sheet.getRange(i + 1, 9).setValue(now);
-      updated = true;
-      break;
-    }
-  }
-  if (!updated) return {success:false, error:'해당 행을 찾을 수 없습니다.'};
-  clearDataCache_();
-
-  if (last) {
-    var hSheet = ss.getSheetByName(HISTORY_SHEET_NAME);
-    if (!hSheet) {
-      hSheet = ss.insertSheet(HISTORY_SHEET_NAME);
-      hSheet.getRange(1,1,1,7).setValues([['매장','장비명','부품명','교체일','담당자','메모','기록일시']]);
-    }
-    hSheet.appendRow([store, device, part, last, manager, memo, now]);
-  }
-  return {success:true, message:store + ' / ' + device + ' / ' + part + ' 업데이트 완료'};
-}
-
-function ensureBakeryEquipmentSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(BAKERY_EQUIPMENT_SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(BAKERY_EQUIPMENT_SHEET_NAME);
-    sheet.getRange(1,1,1,5).setValues([['카테고리','장비명','구매일자','기타사항','최종수정일시']])
-      .setFontWeight('bold').setBackground('#1a1916').setFontColor('#ffffff');
-    sheet.setFrozenRows(1);
-  }
-  return sheet;
-}
-
-function getBakeryEquipment() {
-  var cache = CacheService.getScriptCache();
-  var cached = cache.get(BAKERY_EQUIPMENT_CACHE_KEY);
-  if (cached) return JSON.parse(cached);
-
-  var sheet = ensureBakeryEquipmentSheet();
-  var rows = sheet.getDataRange().getValues();
-  var items = [];
-  for (var i = 1; i < rows.length; i++) {
-    if (!rows[i][1]) continue;
-    var category = String(rows[i][0] || '');
-    if (BAKERY_EQUIPMENT_CATEGORIES.indexOf(category) === -1) category = BAKERY_EQUIPMENT_CATEGORIES[0];
-    items.push({
-      id: i + 1,
-      category: category,
-      device: String(rows[i][1] || ''),
-      purchaseDate: toDateStr(rows[i][2]),
-      note: String(rows[i][3] || '')
+    document.getElementById('hist-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget)
+            closeHistModal();
     });
-  }
-  var result = {success:true, items:items};
-  cache.put(BAKERY_EQUIPMENT_CACHE_KEY, JSON.stringify(result), DATA_CACHE_SECONDS);
-  return result;
-}
 
-function updateBakeryEquipment(p) {
-  var rowIndex = Number(p.rowIndex || p.id);
-  if (!rowIndex || rowIndex < 2) return {success:false, error:'수정할 장비를 찾을 수 없습니다.'};
-  var sheet = ensureBakeryEquipmentSheet();
-  if (rowIndex > sheet.getLastRow()) return {success:false, error:'수정할 장비를 찾을 수 없습니다.'};
-  var category = String(p.category || '');
-  if (BAKERY_EQUIPMENT_CATEGORIES.indexOf(category) === -1) category = BAKERY_EQUIPMENT_CATEGORIES[0];
-  sheet.getRange(rowIndex, 1, 1, 5).setValues([[category, p.device || '', p.purchaseDate || '', p.note || '', nowStr_()]]);
-  clearBakeryEquipmentCache_();
-  return {success:true, message:'베이커리 장비 수정 완료'};
-}
-
-function deleteBakeryEquipment(p) {
-  var rowIndex = Number(p.rowIndex || p.id);
-  if (!rowIndex || rowIndex < 2) return {success:false, error:'삭제할 장비를 찾을 수 없습니다.'};
-  var sheet = ensureBakeryEquipmentSheet();
-  if (rowIndex > sheet.getLastRow()) return {success:false, error:'삭제할 장비를 찾을 수 없습니다.'};
-  sheet.deleteRow(rowIndex);
-  clearBakeryEquipmentCache_();
-  return {success:true, message:'베이커리 장비 삭제 완료'};
-}
-
-function ensureRepairSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(REPAIR_SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(REPAIR_SHEET_NAME);
-    sheet.getRange(1,1,1,9).setValues([['매장','설비구분','설비명','수리일','원인','수리내용','비용','담당자','기록일시']])
-      .setFontWeight('bold').setBackground('#1a1916').setFontColor('#ffffff');
-    sheet.setFrozenRows(1);
-  }
-  return sheet;
-}
-
-function getRepairs(store, category) {
-  var sheet = ensureRepairSheet();
-  var rows = sheet.getDataRange().getValues();
-  var repairs = [];
-  for (var i = 1; i < rows.length; i++) {
-    if (store && rows[i][0] !== store) continue;
-    if (category && category !== '전체' && rows[i][1] !== category) continue;
-    repairs.push({
-      id: i + 1,
-      store: String(rows[i][0] || ''),
-      category: String(rows[i][1] || ''),
-      device: String(rows[i][2] || ''),
-      date: toDateStr(rows[i][3]),
-      cause: String(rows[i][4] || ''),
-      content: String(rows[i][5] || ''),
-      cost: rows[i][6] || '',
-      manager: String(rows[i][7] || ''),
-      recorded: String(rows[i][8] || '')
+    restoreSession().then(restored => {
+        if (!restored)
+            document.getElementById('login-screen').style.display = 'flex';
     });
-  }
-  repairs.sort(function(a,b){ return String(b.date).localeCompare(String(a.date)); });
-  return {success:true, repairs:repairs};
-}
+    </script>
+</body>
+</html>
 
-function addRepair(p) {
-  var store = p.store || '', category = p.category || '', device = p.device || '',
-      date = p.date || '', cause = p.cause || '', content = p.content || '',
-      cost = p.cost || '', manager = p.manager || '';
-  if (!store || !category || !device || !date) return {success:false, error:'필수 파라미터 누락'};
-  ensureRepairSheet().appendRow([store, category, device, date, cause, content, cost, manager, nowStr_()]);
-  return {success:true, message:'수리 이력 추가 완료'};
-}
 
-function updateRepair(p) {
-  var rowIndex = Number(p.rowIndex || p.id);
-  if (!rowIndex || rowIndex < 2) return {success:false, error:'수정할 행을 찾을 수 없습니다.'};
-  var sheet = ensureRepairSheet();
-  if (rowIndex > sheet.getLastRow()) return {success:false, error:'수정할 행을 찾을 수 없습니다.'};
-  sheet.getRange(rowIndex, 1, 1, 9).setValues([[
-    p.store || '', p.category || '', p.device || '', p.date || '', p.cause || '',
-    p.content || '', p.cost || '', p.manager || '', nowStr_()
-  ]]);
-  return {success:true, message:'수리 이력 수정 완료'};
-}
 
-function deleteRepair(p) {
-  var rowIndex = Number(p.rowIndex || p.id);
-  if (!rowIndex || rowIndex < 2) return {success:false, error:'삭제할 행을 찾을 수 없습니다.'};
-  var sheet = ensureRepairSheet();
-  if (rowIndex > sheet.getLastRow()) return {success:false, error:'삭제할 행을 찾을 수 없습니다.'};
-  sheet.deleteRow(rowIndex);
-  return {success:true, message:'수리 이력 삭제 완료'};
-}
 
-function setupUserSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(USER_SHEET_NAME);
-  if (!sheet) {
-    sheet = ss.insertSheet(USER_SHEET_NAME);
-    sheet.getRange(1,1,1,8).setValues([['아이디','비밀번호','이름','이메일','연락처','매장','권한','등록일시']])
-      .setFontWeight('bold').setBackground('#1a1916').setFontColor('#ffffff');
-    sheet.setFrozenRows(1);
-  }
-  ensureAdminUser();
-  return sheet;
-}
-
-function getUserSheet() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(USER_SHEET_NAME);
-  if (!sheet) sheet = setupUserSheet();
-  return sheet;
-}
-
-function publicUser(row) {
-  return {
-    id: String(row[0] || ''),
-    name: String(row[2] || ''),
-    email: String(row[3] || ''),
-    phone: String(row[4] || ''),
-    store: String(row[5] || ''),
-    role: String(row[6] || 'staff')
-  };
-}
-
-function readUsers_() {
-  var rows = getUserSheet().getDataRange().getValues();
-  var users = [];
-  for (var i = 1; i < rows.length; i++) {
-    if (!rows[i][0]) continue;
-    users.push({
-      rowIndex: i + 1,
-      id: String(rows[i][0] || '').trim(),
-      pw: String(rows[i][1] || '').trim(),
-      name: String(rows[i][2] || ''),
-      email: String(rows[i][3] || ''),
-      phone: String(rows[i][4] || ''),
-      store: String(rows[i][5] || ''),
-      role: String(rows[i][6] || 'staff')
-    });
-  }
-  return users;
-}
-
-function findUser_(id) {
-  id = String(id || '').trim();
-  var users = readUsers_();
-  for (var i = 0; i < users.length; i++) {
-    if (users[i].id === id) return users[i];
-  }
-  return null;
-}
-
-function ensureAdminUser() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(USER_SHEET_NAME);
-  if (!sheet) return;
-  var rows = sheet.getDataRange().getValues();
-  for (var i = 1; i < rows.length; i++) {
-    if (String(rows[i][0] || '').trim() === 'admin') return;
-  }
-  sheet.appendRow(['admin','momos2007','이언주','eonju51@momos.co.kr','','','admin',nowStr_()]);
-}
-
-function authAdmin_(p) {
-  var admin = findUser_(p.adminId || p.actorId || '');
-  return !!(admin && admin.role === 'admin');
-}
-
-function getStoreManagerLimit_(store) {
-  return STORE_MANAGER_LIMITS[store] || 999;
-}
-
-function loginUser(p) {
-  var id = String(p.id || '').trim();
-  var pw = String(p.pw || '').trim();
-  var user = findUser_(id);
-  if (!user || user.pw !== pw) return {success:false, error:'아이디 또는 비밀번호가 올바르지 않습니다.'};
-  return {success:true, user:publicUser([user.id,'',user.name,user.email,user.phone,user.store,user.role])};
-}
-
-function listUsers(p) {
-  var requester = findUser_(p.requesterId || p.actorId || '');
-  if (!requester) return {success:false, error:'로그인이 필요합니다.'};
-  var users = readUsers_().map(function(u) {
-    return publicUser([u.id,'',u.name,u.email,u.phone,u.store,u.role]);
-  });
-  if (requester.role !== 'admin') users = users.filter(function(u){ return u.id === requester.id; });
-  return {success:true, users:users};
-}
-
-function addUser(p) {
-  if (!authAdmin_(p)) return {success:false, error:'관리자만 등록할 수 있습니다.'};
-  var id = String(p.id || '').trim();
-  var pw = String(p.pw || '').trim();
-  var store = String(p.store || '').trim();
-  if (!id || !pw) return {success:false, error:'아이디와 비밀번호는 필수입니다.'};
-  if (findUser_(id)) return {success:false, error:'이미 존재하는 아이디입니다.'};
-
-  var users = readUsers_();
-  var sameStoreCount = users.filter(function(u){ return u.store === store && u.role !== 'admin'; }).length;
-  if (store && sameStoreCount >= getStoreManagerLimit_(store)) {
-    return {success:false, error:store + ' 담당자는 최대 ' + getStoreManagerLimit_(store) + '명까지 등록할 수 있습니다.'};
-  }
-
-  getUserSheet().appendRow([id, pw, p.name || '', p.email || '', p.phone || '', store, 'staff', nowStr_()]);
-  return {success:true};
-}
-
-function updateMyProfile(p) {
-  var id = String(p.id || '').trim();
-  var sheet = getUserSheet();
-  var users = readUsers_();
-  for (var i = 0; i < users.length; i++) {
-    var u = users[i];
-    if (u.id !== id) continue;
-    if (p.newPw) {
-      if (u.pw !== String(p.oldPw || '').trim()) return {success:false, error:'현재 비밀번호가 올바르지 않습니다.'};
-      if (String(p.newPw).length < 4) return {success:false, error:'새 비밀번호는 4자 이상이어야 합니다.'};
-      sheet.getRange(u.rowIndex, 2).setValue(String(p.newPw).trim());
-    }
-    sheet.getRange(u.rowIndex, 3).setValue(p.name || '');
-    sheet.getRange(u.rowIndex, 4).setValue(p.email || '');
-    sheet.getRange(u.rowIndex, 5).setValue(p.phone || '');
-    var next = findUser_(id);
-    return {success:true, user:publicUser([next.id,'',next.name,next.email,next.phone,next.store,next.role])};
-  }
-  return {success:false, error:'사용자를 찾을 수 없습니다.'};
-}
-
-function resetUserPassword(p) {
-  if (!authAdmin_(p)) return {success:false, error:'관리자만 변경할 수 있습니다.'};
-  var id = String(p.id || '').trim();
-  var pw = String(p.pw || '').trim();
-  if (!pw || pw.length < 4) return {success:false, error:'비밀번호는 4자 이상이어야 합니다.'};
-  var sheet = getUserSheet();
-  var users = readUsers_();
-  for (var i = 0; i < users.length; i++) {
-    if (users[i].id === id) {
-      sheet.getRange(users[i].rowIndex, 2).setValue(pw);
-      return {success:true};
-    }
-  }
-  return {success:false, error:'사용자를 찾을 수 없습니다.'};
-}
-
-function deleteUser(p) {
-  if (!authAdmin_(p)) return {success:false, error:'관리자만 삭제할 수 있습니다.'};
-  var id = String(p.id || '').trim();
-  if (id === 'admin') return {success:false, error:'admin 계정은 삭제할 수 없습니다.'};
-  var sheet = getUserSheet();
-  var users = readUsers_();
-  for (var i = 0; i < users.length; i++) {
-    if (users[i].id === id) {
-      sheet.deleteRow(users[i].rowIndex);
-      return {success:true};
-    }
-  }
-  return {success:false, error:'사용자를 찾을 수 없습니다.'};
-}
-
-function sendMail(p) {
-  var to = p.to, subject = p.subject, body = p.body;
-  if (!to || !subject || !body) return {success:false, error:'필수 파라미터 누락'};
-  MailApp.sendEmail({to:to, subject:subject, body:body});
-  return {success:true};
-}
-
-function testMail() {
-  MailApp.sendEmail({to:'eonju51@momos.co.kr', subject:'테스트', body:'메일 발송 테스트입니다.'});
-}
