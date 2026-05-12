@@ -1080,6 +1080,16 @@
             <div class="nav-sub" data-store="도모헌" data-mode="parts" onclick="selectStoreMode('도모헌','parts')">📦 장비 부품 교체 주기</div>
             <div class="nav-sub" data-store="도모헌" data-mode="repair" onclick="selectStoreMode('도모헌','repair')">🔧 설비·시설물 수리 이력</div>
         </div>
+        <div class="nav-store" data-store="베이커리" onclick="toggleStoreMenu('베이커리')">
+            <span class="store-dot" style="background:#B7791F;"></span>
+             베이커리
+                
+            <span class="menu-arrow" id="arrow-베이커리">›</span>
+        </div>
+        <div class="submenu" id="sub-베이커리">
+            <div class="nav-sub" data-store="베이커리" data-mode="parts" onclick="selectStoreMode('베이커리','parts')">📋 장비 및 설비 리스트</div>
+            <div class="nav-sub" data-store="베이커리" data-mode="repair" onclick="selectStoreMode('베이커리','repair')">🔧 설비·시설물 수리 이력</div>
+        </div>
 
         <div class="sidebar-section" style="margin-top:.5rem;">관리</div>
         <div class="nav-item" data-store="매장별담당자" onclick="toggleManagerMenu()">
@@ -1171,13 +1181,16 @@
 
     <script>
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec';
-    const STORES = ['본점', '영도', '마린시티', '도모헌'];
+    const STORES = ['본점', '영도', '마린시티', '도모헌', '베이커리'];
+    const PART_STORES = STORES.filter(store => store !== '베이커리');
     const REPAIR_CATEGORIES = ['전체', '머신', '그라인더', '물 필터 장비', '기타 설비'];
+    const BAKERY_REPAIR_CATEGORIES = ['전체', '장비', '설비', '기타'];
     const STORE_MANAGER_LIMITS = {
         '본점': 2,
         '영도': 2,
         '마린시티': 2,
-        '도모헌': 1
+        '도모헌': 1,
+        '베이커리': 1
     };
 
     let activeMode = 'parts'; // 'parts' | 'repair'
@@ -1201,6 +1214,10 @@
         },
         '도모헌': {
             bg: '#784212',
+            fg: '#FFFFFF'
+        },
+        '베이커리': {
+            bg: '#B7791F',
             fg: '#FFFFFF'
         },
     };
@@ -1515,6 +1532,10 @@
             renderRepairPage();
             return;
         }
+        if (activeStore === '베이커리') {
+            el.innerHTML = renderBakeryEquipmentList();
+            return;
+        }
         const sd = allData[activeStore] || {};
         if (!Object.keys(sd).length) {
             el.innerHTML = '<div class="state-box"><p>데이터가 없습니다.</p></div>';
@@ -1529,6 +1550,152 @@
   `
 
         ).join('');
+    }
+
+    function getBakeryEquipmentItems() {
+        const sd = allData?.['베이커리'] || {};
+        const items = [];
+        Object.entries(sd).forEach(([cat, devices]) => {
+            Object.entries(devices || {}).forEach(([dev, rows]) => {
+                (rows || []).forEach(row => {
+                    items.push({
+                        id: row.rowIndex,
+                        category: cat,
+                        device: row.device || dev,
+                        purchaseDate: row.purchaseDate || row.last || '',
+                        note: row.note || ''
+                    });
+                });
+            });
+        });
+        return items;
+    }
+
+    function renderBakeryEquipmentList() {
+        const items = getBakeryEquipmentItems();
+        const rows = items.map((item, i) => `
+      <tr style="background:${i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'};">
+        <td style="padding:9px 12px;font-size:13px;font-weight:500;">${item.device || '-'}</td>
+        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${item.purchaseDate ? fmt(item.purchaseDate) : '<span class="date-empty">미입력</span>'}</td>
+        <td style="padding:9px 12px;font-size:13px;color:var(--muted);">${item.note || ''}</td>
+        <td style="padding:9px 12px;white-space:nowrap;text-align:right;">
+          <button onclick="openBakeryEquipmentModal(${item.id})" style="font-size:11px;color:#2d5a8e;background:none;border:1px solid #c8d8ee;border-radius:5px;padding:2px 7px;cursor:pointer;margin-right:4px;">수정</button>
+          <button onclick="deleteBakeryEquipment(${item.id})" style="font-size:11px;color:#c62828;background:none;border:1px solid #f0c0c0;border-radius:5px;padding:2px 7px;cursor:pointer;">삭제</button>
+        </td>
+      </tr>`
+        ).join('');
+        return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:600;">📋 장비 및 설비 리스트</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">베이커리</div>
+      </div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <colgroup>
+          <col style="width:32%;">
+          <col style="width:18%;">
+          <col style="width:34%;">
+          <col style="width:16%;">
+        </colgroup>
+        <thead>
+          <tr style="background:var(--surface2);">
+            <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">장비명</th>
+            <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">구매 일자</th>
+            <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:left;border-bottom:1px solid var(--border);">기타사항</th>
+            <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);">관리</th>
+          </tr>
+        </thead>
+        <tbody>${items.length ? rows : '<tr><td colspan="4" class="state-box" style="padding:2rem 1rem;">장비 및 설비 리스트가 없습니다.</td></tr>'}</tbody>
+      </table>
+    </div>`;
+    }
+
+    function openBakeryEquipmentModal(rowIndex) {
+        const item = getBakeryEquipmentItems().find(row => Number(row.id) === Number(rowIndex));
+        if (!item) {
+            showToast('수정할 장비를 찾을 수 없습니다.');
+            return;
+        }
+        const existing = document.getElementById('bakery-equipment-modal');
+        if (existing)
+            existing.remove();
+        const modal = document.createElement('div');
+        modal.id = 'bakery-equipment-modal';
+        modal.className = 'overlay open';
+        modal.innerHTML = `
+    <div class="modal" style="width:420px;">
+      <h3>📋 장비 및 설비 수정</h3>
+      <div class="msub">베이커리</div>
+      <label>장비명 *</label>
+      <input type="text" id="b-device" value="${escAttr(item.device)}" placeholder="장비명">
+      <label>구매 일자</label>
+      <input type="date" id="b-purchase" value="${item.purchaseDate || ''}">
+      <label>기타사항</label>
+      <textarea id="b-note" placeholder="기타사항" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);min-height:70px;resize:vertical;font-family:var(--sans);">${escText(item.note)}</textarea>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeBakeryEquipmentModal()">취소</button>
+        <button class="btn-save" onclick="saveBakeryEquipment(${rowIndex})">저장</button>
+      </div>
+      <div class="saving" id="b-saving">저장 중...</div>
+    </div>`;
+        modal.addEventListener('click', e => {
+            if (e.target === modal)
+                closeBakeryEquipmentModal();
+        });
+        document.body.appendChild(modal);
+    }
+
+    function closeBakeryEquipmentModal() {
+        const modal = document.getElementById('bakery-equipment-modal');
+        if (modal)
+            modal.remove();
+    }
+
+    async function saveBakeryEquipment(rowIndex) {
+        const device = document.getElementById('b-device').value.trim();
+        const purchaseDate = document.getElementById('b-purchase').value;
+        const note = document.getElementById('b-note').value.trim();
+        if (!device) {
+            showToast('장비명은 필수입니다.');
+            return;
+        }
+        document.getElementById('b-saving').style.display = 'block';
+        try {
+            const json = await apiPost({
+                action: 'updateBakeryEquipment',
+                rowIndex,
+                device,
+                purchaseDate,
+                note
+            });
+            if (!json.success)
+                throw new Error(json.error);
+            closeBakeryEquipmentModal();
+            showToast('저장 완료');
+            await loadData();
+        } catch (e) {
+            document.getElementById('b-saving').style.display = 'none';
+            showToast('저장 실패: ' + e.message);
+        }
+    }
+
+    async function deleteBakeryEquipment(rowIndex) {
+        if (!confirm('이 장비를 삭제하시겠습니까?'))
+            return;
+        try {
+            const json = await apiPost({
+                action: 'deleteBakeryEquipment',
+                rowIndex
+            });
+            if (!json.success)
+                throw new Error(json.error);
+            showToast('삭제 완료');
+            await loadData();
+        } catch (e) {
+            showToast('삭제 실패: ' + e.message);
+        }
     }
 
     // ── 대시보드 ──────────────────────────────────────────────
@@ -1546,7 +1713,7 @@
             none: []
         };
         const storeCounts = {};
-        STORES.forEach(store => {
+        PART_STORES.forEach(store => {
             storeCounts[store] = {
                 total: 0,
                 danger: 0,
@@ -1575,7 +1742,7 @@
         });
 
         // 매장별 현황 바
-        const storeRows = STORES.map(s => {
+        const storeRows = PART_STORES.map(s => {
             const sc = STORE_COLORS[s] || {
                 bg: '#1a1916',
                 fg: '#fff'
@@ -1613,7 +1780,7 @@
 
         // 지남 항목만 표시
         const overdueItems = [];
-        STORES.forEach(store => {
+        PART_STORES.forEach(store => {
             Object.values(allData[store] || {}).forEach(cat =>
             Object.entries(cat).forEach(([dev, parts]) =>
             parts.forEach(p => {
@@ -1839,7 +2006,7 @@
         }
         const today = todayISO();
         const alerts = [];
-        STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
+        PART_STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
         Object.values(cat).forEach(dev => dev.forEach(p => {
             const d = diffDays(today, p.next);
             if (d !== null && d >= 0 && d <= 30)
@@ -1893,7 +2060,13 @@
     let repairData = [];
     let repairCategory = '전체';
 
+    function getRepairCategories() {
+        return activeStore === '베이커리' ? BAKERY_REPAIR_CATEGORIES : REPAIR_CATEGORIES;
+    }
+
     async function renderRepairPage() {
+        if (!getRepairCategories().includes(repairCategory))
+            repairCategory = '전체';
         const el = document.getElementById('store-content');
         el.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
@@ -1911,7 +2084,7 @@
 
 
 
-        REPAIR_CATEGORIES.map(c => `
+        getRepairCategories().map(c => `
         <button onclick="filterRepair('${c}')"
           style="padding:5px 14px;border-radius:20px;border:1px solid var(--border);background:${c === repairCategory ? 'var(--accent)' : 'var(--surface)'};color:${c === repairCategory ? '#fff' : 'var(--muted)'};font-size:12px;cursor:pointer;">
           ${c}
@@ -2100,10 +2273,7 @@
         editingRepair ? editingRepair.date : todayISO()}">
       <label>설비 구분 *</label>
       <select id="r-cat" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);">
-        <option value="머신" ${editingRepair?.category === '머신' ? 'selected' : ''}>머신</option>
-        <option value="그라인더" ${editingRepair?.category === '그라인더' ? 'selected' : ''}>그라인더</option>
-        <option value="물 필터 장비" ${editingRepair?.category === '물 필터 장비' ? 'selected' : ''}>물 필터 장비</option>
-        <option value="기타 설비" ${editingRepair?.category === '기타 설비' ? 'selected' : ''}>기타 설비</option>
+        ${getRepairCategories().filter(c => c !== '전체').map(c => `<option value="${c}" ${editingRepair?.category === c ? 'selected' : ''}>${c}</option>`).join('')}
       </select>
       <label>설비명 / 장비명 *</label>
       <input type="text" id="r-device" placeholder="예: 빅토리아 아르두이노 블랙이글 매버릭" value="${editingRepair ? escAttr(editingRepair.device) : ''}">
@@ -2601,7 +2771,7 @@
         const admins = loadAdmins();
         const today = todayISO();
         const alerts = [];
-        STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
+        PART_STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
         Object.values(cat).forEach(dev => dev.forEach(p => {
             const d = diffDays(today, p.next);
             if (d !== null && d >= 0 && d <= 30)
@@ -2676,7 +2846,7 @@
             btn.textContent = '발송 중...';
         }
         const byStore = {};
-        STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
+        PART_STORES.forEach(store => Object.values(allData[store] || {}).forEach(cat =>
         Object.values(cat).forEach(dev => dev.forEach(p => {
             const d = diffDays(todayISO(), p.next);
             if (d !== null && d >= 0 && d <= 30) {
@@ -2780,7 +2950,9 @@
         activeStore = store;
         activeMode = mode;
         activeFilter = null;
-        const modeLabel = mode === 'repair' ? ' · 수리 이력' : ' · 부품 교체';
+        if (mode === 'repair' && !getRepairCategories().includes(repairCategory))
+            repairCategory = '전체';
+        const modeLabel = mode === 'repair' ? ' · 수리 이력' : (store === '베이커리' ? ' · 장비 및 설비 리스트' : ' · 부품 교체');
         document.getElementById('topbar-title').textContent = store + modeLabel;
         saveUiState();
         updateSidebarActive();
@@ -2991,7 +3163,7 @@
             '알림발송': '알림 발송',
             '시스템관리자': '시스템 관리자'
         };
-        const modeLabel = activeMode === 'repair' ? ' · 수리 이력' : ' · 부품 교체';
+        const modeLabel = activeMode === 'repair' ? ' · 수리 이력' : (activeStore === '베이커리' ? ' · 장비 및 설비 리스트' : ' · 부품 교체');
         document.getElementById('topbar-title').textContent = STORES.includes(activeStore)
             ? activeStore + modeLabel
             : (titles[activeStore] || activeStore);
@@ -3020,8 +3192,11 @@
             syncTitleFromState();
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('login-error').style.display = 'none';
-            await refreshUsers();
             loadData();
+            refreshUsers().then(() => {
+                if (activeStore === '매장별담당자' || activeStore === '시스템관리자' || activeStore === '알림발송')
+                    renderStore();
+            }).catch(() => {});
             return true;
         } catch (e) {
             localStorage.removeItem(SESSION_KEY);
@@ -3051,10 +3226,13 @@
             try {
                 localStorage.setItem(SESSION_KEY, JSON.stringify(session));
             } catch (e) {}
-            await refreshUsers();
             saveUiState();
             document.getElementById('login-screen').style.display = 'none';
             loadData();
+            refreshUsers().then(() => {
+                if (activeStore === '매장별담당자' || activeStore === '시스템관리자' || activeStore === '알림발송')
+                    renderStore();
+            }).catch(() => {});
         } catch (e) {
             err.textContent = e.message || '아이디 또는 비밀번호가 올바르지 않습니다.';
             err.style.display = 'block';
