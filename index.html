@@ -1173,6 +1173,12 @@
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzIch0hUSfE67NV3LvgDhJdbizbXtbk0JIxfD0RyXWJvchy4T2mvEYKDGm02NjudXAC/exec';
     const STORES = ['본점', '영도', '마린시티', '도모헌'];
     const REPAIR_CATEGORIES = ['전체', '머신', '그라인더', '물 필터 장비', '기타 설비'];
+    const STORE_MANAGER_LIMITS = {
+        '본점': 2,
+        '영도': 2,
+        '마린시티': 2,
+        '도모헌': 1
+    };
 
     let activeMode = 'parts'; // 'parts' | 'repair'
     const ADMIN_KEY = 'eq_admins_v1';
@@ -1362,13 +1368,39 @@
             localStorage.setItem(ADMIN_KEY, JSON.stringify(d));
         } catch (e) {}
     }
+    function getManagerLimit(store) {
+        return STORE_MANAGER_LIMITS[store] || 1;
+    }
+    function getStoreManagers(admins, store) {
+        const limit = getManagerLimit(store);
+        const raw = admins[store] || {};
+        let people = Array.isArray(raw.people) ? raw.people : [];
+        if (!people.length && (raw.name || raw.phone || raw.email || raw.userId)) {
+            people = [{
+                name: raw.name || '',
+                phone: raw.phone || '',
+                email: raw.email || '',
+                userId: raw.userId || ''
+            }];
+        }
+        people = people.slice(0, limit);
+        while (people.length < limit) {
+            people.push({
+                name: '',
+                phone: '',
+                email: '',
+                userId: ''
+            });
+        }
+        return people;
+    }
     function getUserStore(user=currentUser) {
         if (!user || user.role === 'admin')
             return '';
         if (user.store && STORES.includes(user.store))
             return user.store;
         const admins = loadAdmins();
-        return STORES.find(s => (admins[s] || {}).userId === user.id) || '';
+        return STORES.find(s => getStoreManagers(admins, s).some(p => p.userId === user.id)) || '';
     }
 
     // ── 사이드바 ──────────────────────────────────────────────
@@ -1716,22 +1748,24 @@
     function renderStoreManagers() {
         const admins = loadAdmins();
         const cards = STORES.map(s => {
-            const a = admins[s] || {};
+            const people = getStoreManagers(admins, s);
             const sc = STORE_COLORS[s] || {
                 bg: '#1a1916',
                 fg: '#fff'
             };
-            const name = a.name || '미입력';
-            const phone = a.phone || '미입력';
-            const email = a.email || '미입력';
+            const peopleHtml = people.map((person, idx) => `
+          <div style="padding:${idx === 0 ? '0' : '10px 0 0'};${idx === 0 ? '' : 'border-top:1px solid var(--border);'}">
+            <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:6px;">담당자 ${idx + 1}</div>
+            <div><span style="display:block;font-size:10px;color:var(--muted);margin-bottom:3px;">담당자 이름</span><strong>${person.name || '미입력'}</strong></div>
+            <div><span style="display:block;font-size:10px;color:var(--muted);margin-bottom:3px;margin-top:6px;">연락처</span>${person.phone || '미입력'}</div>
+            <div><span style="display:block;font-size:10px;color:var(--muted);margin-bottom:3px;margin-top:6px;">이메일</span>${person.email || '미입력'}</div>
+          </div>`
+            ).join('');
             return `
       <div class="admin-card" data-store="${s}">
         <div class="store-badge" style="background:${sc.bg};color:${sc.fg};">${s}</div>
         <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;">
-          <div><span style="display:block;font-size:10px;color:var(--muted);margin-bottom:3px;">담당자 이름</span><strong>${
-            name}</strong></div>
-          <div><span style="display:block;font-size:10px;color:var(--muted);margin-bottom:3px;">연락처</span>${phone}</div>
-          <div><span style="display:block;font-size:10px;color:var(--muted);margin-bottom:3px;">이메일</span>${email}</div>
+          ${peopleHtml}
         </div>
       </div>`
 
@@ -2176,17 +2210,23 @@
         const editableStores = STORES;
 
         const storeCards = editableStores.map(s => {
-            const sa = admins[s] || {};
+            const people = getStoreManagers(admins, s);
             const ssc = STORE_COLORS[s] || {
                 bg: '#1a1916',
                 fg: '#fff'
             };
+            const personFields = people.map((person, idx) => `
+        <div data-manager-index="${idx}" style="padding:${idx === 0 ? '0' : '12px 0 0'};${idx === 0 ? '' : 'border-top:1px solid var(--border);margin-top:12px;'}">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;">담당자 ${idx + 1}</div>
+          <div class="admin-field"><label>담당자 이름</label><input type="text" class="e-name" value="${escAttr(person.name)}" placeholder="이름 입력"></div>
+          <div class="admin-field"><label>연락처</label><input type="text" class="e-phone" value="${escAttr(person.phone)}" placeholder="010-0000-0000"></div>
+          <div class="admin-field"><label>이메일</label><input type="email" class="e-email" value="${escAttr(person.email)}" placeholder="email@example.com"></div>
+        </div>`
+            ).join('');
             return `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.25rem;margin-bottom:1rem;" data-edit-store="${s}">
         <div class="store-badge" style="background:${ssc.bg};color:${ssc.fg};margin-bottom:12px;">${s}</div>
-        <div class="admin-field"><label>담당자 이름</label><input type="text" class="e-name" value="${sa.name || ''}" placeholder="이름 입력"></div>
-        <div class="admin-field"><label>연락처</label><input type="text" class="e-phone" value="${sa.phone || ''}" placeholder="010-0000-0000"></div>
-        <div class="admin-field"><label>이메일</label><input type="email" class="e-email" value="${sa.email || ''}" placeholder="email@example.com"></div>
+        ${personFields}
         <button onclick="saveMyInfo('${s}')" style="width:100%;margin-top:10px;padding:7px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;">정보 저장</button>
       </div>`
             ;
@@ -2228,11 +2268,15 @@
         }
         const card = document.querySelector(`[data-edit-store="${store}"]`);
         const admins = loadAdmins();
-        if (!admins[store])
-            admins[store] = {};
-        admins[store].name = card.querySelector('.e-name').value.trim();
-        admins[store].phone = card.querySelector('.e-phone').value.trim();
-        admins[store].email = card.querySelector('.e-email').value.trim();
+        const people = Array.from(card.querySelectorAll('[data-manager-index]')).map(row => ({
+            name: row.querySelector('.e-name').value.trim(),
+            phone: row.querySelector('.e-phone').value.trim(),
+            email: row.querySelector('.e-email').value.trim(),
+            userId: ''
+        }));
+        admins[store] = {
+            people
+        };
         saveAdmins(admins);
         showToast(`${store} 담당자 정보 저장 완료`);
     }
@@ -2399,13 +2443,18 @@
         saveUsers(users);
         if (store) {
             const admins = loadAdmins();
-            if (!admins[store])
-                admins[store] = {};
-            admins[store].userId = id;
-            if (name)
-                admins[store].name = name;
-            if (email)
-                admins[store].email = email;
+            const people = getStoreManagers(admins, store);
+            const emptySlot = people.findIndex(p => !p.userId && !p.name && !p.email && !p.phone);
+            const targetIndex = emptySlot === -1 ? 0 : emptySlot;
+            people[targetIndex] = {
+                userId: id,
+                name,
+                email,
+                phone: people[targetIndex]?.phone || ''
+            };
+            admins[store] = {
+                people
+            };
             saveAdmins(admins);
         }
         msg.style.display = 'block';
@@ -2421,8 +2470,20 @@
         saveUsers(users);
         const admins = loadAdmins();
         STORES.forEach(s => {
-            if ((admins[s] || {}).userId === id)
-                delete admins[s].userId;
+            const people = getStoreManagers(admins, s).map(person => {
+                if (person.userId === id) {
+                    return {
+                        name: '',
+                        phone: '',
+                        email: '',
+                        userId: ''
+                    };
+                }
+                return person;
+            });
+            admins[s] = {
+                people
+            };
         });
         saveAdmins(admins);
         renderStore();
@@ -2597,8 +2658,10 @@
         let sent = 0,
             failed = 0;
         for (const [store, parts] of Object.entries(byStore)) {
-            const admin = admins[store];
-            if (!admin?.email) {
+            const recipients = getStoreManagers(admins, store)
+                .map(person => person.email)
+                .filter(Boolean);
+            if (!recipients.length) {
                 failed++;
                 continue;
             }
@@ -2610,7 +2673,7 @@
                     method: 'POST',
                     body: JSON.stringify({
                         action: 'sendMail',
-                        to: admin.email,
+                        to: recipients.join(','),
                         subject: '[확인 요청] 장비 부품 교체 주기 경과 예정 안내',
                         body: `안녕하세요, 매장에서 사용 중인 장비의 부품 교체 시기가 도래하여 확인 요청드립니다.\n\n${partLines}\n\n감사합니다.`
                     })
