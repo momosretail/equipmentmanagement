@@ -1433,6 +1433,12 @@
             }));
         } catch (e) {}
     }
+    function applyLoadedData(data) {
+        allData = data;
+        saveDataCache(allData);
+        activeFilter = null;
+        render();
+    }
     function getManagerLimit(store) {
         return STORE_MANAGER_LIMITS[store] || 1;
     }
@@ -1480,6 +1486,10 @@
 
     // ── 데이터 로딩 ───────────────────────────────────────────
     async function loadData(options = {}) {
+        if (options.data) {
+            applyLoadedData(options.data);
+            return;
+        }
         const usedCache = options.preferCache && loadCachedData();
         if (!usedCache)
             showLoading();
@@ -1488,10 +1498,7 @@
             const json = await res.json();
             if (!json.success)
                 throw new Error(json.error);
-            allData = json.data;
-            saveDataCache(allData);
-            activeFilter = null;
-            render();
+            applyLoadedData(json.data);
         } catch (e) {
             if (!usedCache)
                 showError(e.message || '데이터를 불러오지 못했습니다.');
@@ -3306,7 +3313,8 @@
             const json = await apiPost({
                 action: 'login',
                 id,
-                pw
+                pw,
+                includeData: true
             });
             if (!json.success)
                 throw new Error(json.error);
@@ -3320,7 +3328,10 @@
                 localStorage.setItem(SESSION_KEY, JSON.stringify(session));
             } catch (e) {}
             saveUiState();
-            loadData({preferCache: true});
+            if (json.data)
+                loadData({data: json.data});
+            else
+                loadData({preferCache: true});
         } catch (e) {
             currentUser = null;
             try {
