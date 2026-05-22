@@ -1184,7 +1184,7 @@
     const STORES = ['본점', '영도', '마린시티', '도모헌', '베이커리'];
     const PART_STORES = STORES.filter(store => store !== '베이커리');
     const REPAIR_CATEGORIES = ['전체', '머신', '그라인더', '물 필터 장비', '기타 설비'];
-    const BAKERY_EQUIPMENT_CATEGORIES = ['냉장·냉동 설비', '발효·도우 관리 설비', '반죽·성형 장비', '베이킹·가열 장비'];
+    const BAKERY_EQUIPMENT_CATEGORIES = ['냉장·냉동 설비', '발효·도우 관리 설비', '반죽·성형 장비', '베이킹·가열 장비', '마린시티', '기타'];
     const BAKERY_REPAIR_CATEGORIES = ['전체', ...BAKERY_EQUIPMENT_CATEGORIES];
     const STORE_MANAGER_LIMITS = {
         '본점': 2,
@@ -1630,25 +1630,24 @@
     let bakeryActiveTab = BAKERY_EQUIPMENT_CATEGORIES[0];
     function renderBakeryEquipmentList() {
         const grouped = {};
-        const allCats = [...BAKERY_EQUIPMENT_CATEGORIES, '기타'];
-        allCats.forEach(cat => grouped[cat] = []);
+        BAKERY_EQUIPMENT_CATEGORIES.forEach(cat => grouped[cat] = []);
         getBakeryEquipmentItems().forEach(item => {
             const cat = BAKERY_EQUIPMENT_CATEGORIES.includes(item.category) ? item.category : '기타';
             grouped[cat].push(item);
         });
-        if (!allCats.includes(bakeryActiveTab)) bakeryActiveTab = allCats[0];
+        if (!BAKERY_EQUIPMENT_CATEGORIES.includes(bakeryActiveTab)) bakeryActiveTab = BAKERY_EQUIPMENT_CATEGORIES[0];
         const activeItems = grouped[bakeryActiveTab] || [];
         const rows = activeItems.map((item, i) => `
       <tr style="background:${i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'};">
         <td style="padding:9px 12px;font-size:13px;font-weight:500;">${item.device || '-'}</td>
-        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${(() => { if (!item.purchaseDate || !String(item.purchaseDate).trim()) return '<span class="date-empty">미입력</span>'; const formatted = fmt(item.purchaseDate); if (formatted) return formatted; return `<span style="color:var(--muted);font-style:italic;">${item.purchaseDate}</span>`; })()}</td>
+        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${(() => { const v = item.purchaseDate; if (!v || !String(v).trim()) return '<span class="date-empty">미입력</span>'; const f = fmt(v); return f || `<span style="color:var(--muted);font-style:italic;">${v}</span>`; })()}</td>
         <td style="padding:9px 12px;font-size:13px;color:var(--muted);">${item.note || ''}</td>
         <td style="padding:9px 12px;white-space:nowrap;text-align:right;">
           <button onclick="openBakeryEquipmentModal(${item.id})" style="font-size:11px;color:#2d5a8e;background:none;border:1px solid #c8d8ee;border-radius:5px;padding:2px 7px;cursor:pointer;margin-right:4px;">수정</button>
           <button onclick="deleteBakeryEquipment(${item.id})" style="font-size:11px;color:#c62828;background:none;border:1px solid #f0c0c0;border-radius:5px;padding:2px 7px;cursor:pointer;">삭제</button>
         </td>
       </tr>`).join('');
-        const tabBar = allCats.map(cat => {
+        const tabBar = BAKERY_EQUIPMENT_CATEGORIES.map(cat => {
             const isActive = cat === bakeryActiveTab;
             return `<button onclick="setBakeryTab('${cat}')" style="padding:8px 16px;font-size:13px;font-weight:${isActive ? '600' : '400'};border:none;border-bottom:${isActive ? '2px solid #1a1916' : '2px solid transparent'};background:transparent;color:${isActive ? '#1a1916' : 'var(--muted)'};cursor:pointer;white-space:nowrap;transition:all .15s;">${cat} <span style="font-size:11px;color:${isActive ? '#1a1916' : 'var(--muted)'};">${grouped[cat].length}</span></button>`;
         }).join('');
@@ -1664,7 +1663,7 @@
     </div>
     <div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="font-size:16px;font-weight:700;color:#1a1916;">${bakeryActiveTab}</span>
+        <span style="font-size:15px;font-weight:700;color:#1a1916;">${bakeryActiveTab}</span>
         <span style="font-size:13px;color:var(--muted);font-weight:400;">${activeItems.length}건</span>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
@@ -1687,6 +1686,11 @@
         </table>
       </div>
     </div>`;
+    }
+
+    function setBakeryTab(cat) {
+        bakeryActiveTab = cat;
+        document.getElementById('store-content').innerHTML = renderBakeryEquipmentList();
     }
 
     function openBakeryEquipmentModal(rowIndex) {
@@ -1763,11 +1767,6 @@
             document.getElementById('b-saving').style.display = 'none';
             showToast('저장 실패: ' + e.message);
         }
-    }
-
-    function setBakeryTab(cat) {
-        bakeryActiveTab = cat;
-        document.getElementById('store-content').innerHTML = renderBakeryEquipmentList();
     }
 
     async function deleteBakeryEquipment(rowIndex) {
