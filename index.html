@@ -1627,29 +1627,45 @@
         return bakeryEquipmentData;
     }
 
+    let bakeryActiveTab = BAKERY_EQUIPMENT_CATEGORIES[0];
     function renderBakeryEquipmentList() {
         const grouped = {};
-        BAKERY_EQUIPMENT_CATEGORIES.forEach(cat => grouped[cat] = []);
+        const allCats = [...BAKERY_EQUIPMENT_CATEGORIES, '기타'];
+        allCats.forEach(cat => grouped[cat] = []);
         getBakeryEquipmentItems().forEach(item => {
-            const cat = BAKERY_EQUIPMENT_CATEGORIES.includes(item.category) ? item.category : BAKERY_EQUIPMENT_CATEGORIES[0];
+            const cat = BAKERY_EQUIPMENT_CATEGORIES.includes(item.category) ? item.category : '기타';
             grouped[cat].push(item);
         });
-        const renderTable = (cat, items) => {
-            const rows = items.map((item, i) => `
+        if (!allCats.includes(bakeryActiveTab)) bakeryActiveTab = allCats[0];
+        const activeItems = grouped[bakeryActiveTab] || [];
+        const rows = activeItems.map((item, i) => `
       <tr style="background:${i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'};">
         <td style="padding:9px 12px;font-size:13px;font-weight:500;">${item.device || '-'}</td>
-        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${item.purchaseDate ? fmt(item.purchaseDate) : '<span class="date-empty">미입력</span>'}</td>
+        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${(() => { if (!item.purchaseDate || !String(item.purchaseDate).trim()) return '<span class="date-empty">미입력</span>'; const formatted = fmt(item.purchaseDate); if (formatted) return formatted; return `<span style="color:var(--muted);font-style:italic;">${item.purchaseDate}</span>`; })()}</td>
         <td style="padding:9px 12px;font-size:13px;color:var(--muted);">${item.note || ''}</td>
         <td style="padding:9px 12px;white-space:nowrap;text-align:right;">
           <button onclick="openBakeryEquipmentModal(${item.id})" style="font-size:11px;color:#2d5a8e;background:none;border:1px solid #c8d8ee;border-radius:5px;padding:2px 7px;cursor:pointer;margin-right:4px;">수정</button>
           <button onclick="deleteBakeryEquipment(${item.id})" style="font-size:11px;color:#c62828;background:none;border:1px solid #f0c0c0;border-radius:5px;padding:2px 7px;cursor:pointer;">삭제</button>
         </td>
       </tr>`).join('');
-            return `
-    <div style="margin-bottom:1.25rem;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <span style="font-size:11px;font-weight:600;background:#f0f0ee;color:#1a1916;border-radius:10px;padding:2px 10px;">${cat}</span>
-        <span style="font-size:11px;color:var(--muted);">${items.length}건</span>
+        const tabBar = allCats.map(cat => {
+            const isActive = cat === bakeryActiveTab;
+            return `<button onclick="setBakeryTab('${cat}')" style="padding:8px 16px;font-size:13px;font-weight:${isActive ? '600' : '400'};border:none;border-bottom:${isActive ? '2px solid #1a1916' : '2px solid transparent'};background:transparent;color:${isActive ? '#1a1916' : 'var(--muted)'};cursor:pointer;white-space:nowrap;transition:all .15s;">${cat} <span style="font-size:11px;color:${isActive ? '#1a1916' : 'var(--muted)'};">${grouped[cat].length}</span></button>`;
+        }).join('');
+        return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:600;">📋 장비 및 설비 리스트</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">베이커리 · 베이커리장비 시트 기준</div>
+      </div>
+    </div>
+    <div style="border-bottom:1px solid var(--border);margin-bottom:1.25rem;display:flex;gap:0;overflow-x:auto;">
+      ${tabBar}
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-size:15px;font-weight:700;color:#1a1916;">${bakeryActiveTab}</span>
+        <span style="font-size:13px;color:var(--muted);font-weight:400;">${activeItems.length}건</span>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
         <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
@@ -1667,19 +1683,10 @@
               <th style="font-size:12px;color:var(--muted);font-weight:500;padding:7px 12px;text-align:right;border-bottom:1px solid var(--border);">관리</th>
             </tr>
           </thead>
-          <tbody>${items.length ? rows : '<tr><td colspan="4" class="state-box" style="padding:1.5rem 1rem;">등록된 장비가 없습니다.</td></tr>'}</tbody>
+          <tbody>${activeItems.length ? rows : '<tr><td colspan="4" class="state-box" style="padding:1.5rem 1rem;">등록된 장비가 없습니다.</td></tr>'}</tbody>
         </table>
       </div>
     </div>`;
-        };
-        return `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
-      <div>
-        <div style="font-size:16px;font-weight:600;">📋 장비 및 설비 리스트</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px;">베이커리 · 베이커리장비 시트 기준</div>
-      </div>
-    </div>
-    ${BAKERY_EQUIPMENT_CATEGORIES.map(cat => renderTable(cat, grouped[cat])).join('')}`;
     }
 
     function openBakeryEquipmentModal(rowIndex) {
@@ -1756,6 +1763,11 @@
             document.getElementById('b-saving').style.display = 'none';
             showToast('저장 실패: ' + e.message);
         }
+    }
+
+    function setBakeryTab(cat) {
+        bakeryActiveTab = cat;
+        document.getElementById('store-content').innerHTML = renderBakeryEquipmentList();
     }
 
     async function deleteBakeryEquipment(rowIndex) {
