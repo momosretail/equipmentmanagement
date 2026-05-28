@@ -900,7 +900,25 @@
     .toast.show {
         opacity: 1;
         transform: translateX(-50%) translateY(0);
-    }/* ── Mobile ── */
+    }
+
+    .repair-table th, .repair-table td {
+        overflow-wrap: anywhere;
+        word-break: keep-all;
+        line-height: 1.45;
+        vertical-align: middle;
+    }
+
+    .repair-table .repair-cost {
+        white-space: nowrap;
+    }
+
+    .repair-table .repair-actions {
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    /* ── Mobile ── */
     .hamburger {
         display: none;
         background: none;
@@ -1004,6 +1022,101 @@
 
         .mobile-parts {
             display: block;
+        }
+        .repair-table-wrap {
+            background: transparent !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            overflow: visible !important;
+        }
+
+        .repair-table {
+            display: block;
+            border-collapse: separate !important;
+            table-layout: auto !important;
+        }
+
+        .repair-table colgroup,
+        .repair-table thead {
+            display: none;
+        }
+
+        .repair-table tbody {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .repair-table tr {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 9px 12px;
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            background: var(--surface) !important;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, .03);
+        }
+
+        .repair-table td {
+            display: block;
+            min-width: 0;
+            padding: 0 !important;
+            border: 0 !important;
+            font-size: 13px !important;
+        }
+
+        .repair-table td::before {
+            content: attr(data-label);
+            display: block;
+            margin-bottom: 2px;
+            font-family: var(--sans);
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--muted);
+        }
+
+        .repair-table .repair-date {
+            grid-column: 1 / 2;
+            color: var(--muted);
+        }
+
+        .repair-table .repair-device {
+            grid-column: 1 / -1;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            overflow-wrap: anywhere;
+        }
+
+        .repair-table .repair-cause,
+        .repair-table .repair-content {
+            grid-column: 1 / -1;
+        }
+
+        .repair-table .repair-cost {
+            grid-column: 1 / 2;
+            font-size: 14px !important;
+            font-weight: 600;
+            text-align: left !important;
+        }
+
+        .repair-table .repair-manager {
+            grid-column: 2 / 3;
+            min-width: 64px;
+            max-width: 96px;
+            text-align: right;
+        }
+
+        .repair-table .repair-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+            padding-top: 2px !important;
+        }
+
+        .repair-table .repair-actions::before {
+            display: none;
         }
     }
     </style>
@@ -1184,7 +1297,7 @@
     const STORES = ['본점', '영도', '마린시티', '도모헌', '베이커리'];
     const PART_STORES = STORES.filter(store => store !== '베이커리');
     const REPAIR_CATEGORIES = ['전체', '머신', '그라인더', '물 필터 장비', '기타 설비'];
-    const BAKERY_EQUIPMENT_CATEGORIES = ['냉장·냉동 설비', '발효·도우 관리 설비', '반죽·성형 장비', '베이킹·가열 장비', '마린시티', '기타'];
+    const BAKERY_EQUIPMENT_CATEGORIES = ['냉장·냉동 설비', '발효·도우 관리 설비', '반죽·성형 장비', '베이킹·가열 장비'];
     const BAKERY_REPAIR_CATEGORIES = ['전체', ...BAKERY_EQUIPMENT_CATEGORIES];
     const STORE_MANAGER_LIMITS = {
         '본점': 2,
@@ -1630,24 +1743,25 @@
     let bakeryActiveTab = BAKERY_EQUIPMENT_CATEGORIES[0];
     function renderBakeryEquipmentList() {
         const grouped = {};
-        BAKERY_EQUIPMENT_CATEGORIES.forEach(cat => grouped[cat] = []);
+        const allCats = [...BAKERY_EQUIPMENT_CATEGORIES, '기타'];
+        allCats.forEach(cat => grouped[cat] = []);
         getBakeryEquipmentItems().forEach(item => {
             const cat = BAKERY_EQUIPMENT_CATEGORIES.includes(item.category) ? item.category : '기타';
             grouped[cat].push(item);
         });
-        if (!BAKERY_EQUIPMENT_CATEGORIES.includes(bakeryActiveTab)) bakeryActiveTab = BAKERY_EQUIPMENT_CATEGORIES[0];
+        if (!allCats.includes(bakeryActiveTab)) bakeryActiveTab = allCats[0];
         const activeItems = grouped[bakeryActiveTab] || [];
         const rows = activeItems.map((item, i) => `
       <tr style="background:${i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'};">
         <td style="padding:9px 12px;font-size:13px;font-weight:500;">${item.device || '-'}</td>
-        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${(() => { const v = item.purchaseDate; if (!v || !String(v).trim()) return '<span class="date-empty">미입력</span>'; const f = fmt(v); return f || `<span style="color:var(--muted);font-style:italic;">${v}</span>`; })()}</td>
+        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${(() => { if (!item.purchaseDate || !String(item.purchaseDate).trim()) return '<span class="date-empty">미입력</span>'; const formatted = fmt(item.purchaseDate); if (formatted) return formatted; return `<span style="color:var(--muted);font-style:italic;">${item.purchaseDate}</span>`; })()}</td>
         <td style="padding:9px 12px;font-size:13px;color:var(--muted);">${item.note || ''}</td>
-        <td style="padding:9px 12px;white-space:nowrap;text-align:right;">
+        <td class="repair-actions" data-label="관리" style="padding:9px 12px;white-space:nowrap;text-align:right;">
           <button onclick="openBakeryEquipmentModal(${item.id})" style="font-size:11px;color:#2d5a8e;background:none;border:1px solid #c8d8ee;border-radius:5px;padding:2px 7px;cursor:pointer;margin-right:4px;">수정</button>
           <button onclick="deleteBakeryEquipment(${item.id})" style="font-size:11px;color:#c62828;background:none;border:1px solid #f0c0c0;border-radius:5px;padding:2px 7px;cursor:pointer;">삭제</button>
         </td>
       </tr>`).join('');
-        const tabBar = BAKERY_EQUIPMENT_CATEGORIES.map(cat => {
+        const tabBar = allCats.map(cat => {
             const isActive = cat === bakeryActiveTab;
             return `<button onclick="setBakeryTab('${cat}')" style="padding:8px 16px;font-size:13px;font-weight:${isActive ? '600' : '400'};border:none;border-bottom:${isActive ? '2px solid #1a1916' : '2px solid transparent'};background:transparent;color:${isActive ? '#1a1916' : 'var(--muted)'};cursor:pointer;white-space:nowrap;transition:all .15s;">${cat} <span style="font-size:11px;color:${isActive ? '#1a1916' : 'var(--muted)'};">${grouped[cat].length}</span></button>`;
         }).join('');
@@ -1686,11 +1800,6 @@
         </table>
       </div>
     </div>`;
-    }
-
-    function setBakeryTab(cat) {
-        bakeryActiveTab = cat;
-        document.getElementById('store-content').innerHTML = renderBakeryEquipmentList();
     }
 
     function openBakeryEquipmentModal(rowIndex) {
@@ -1767,6 +1876,11 @@
             document.getElementById('b-saving').style.display = 'none';
             showToast('저장 실패: ' + e.message);
         }
+    }
+
+    function setBakeryTab(cat) {
+        bakeryActiveTab = cat;
+        document.getElementById('store-content').innerHTML = renderBakeryEquipmentList();
     }
 
     async function deleteBakeryEquipment(rowIndex) {
@@ -2262,13 +2376,13 @@
             };
             const rows = items.map((r, i) => `
       <tr style="background:${i % 2 === 0 ? 'var(--surface)' : 'var(--surface2)'};">
-        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${fmt(r.date)}</td>
-        <td style="padding:9px 12px;font-size:13px;font-weight:500;">${r.device}</td>
-        <td style="padding:9px 12px;font-size:13px;color:var(--muted);">${r.cause}</td>
-        <td style="padding:9px 12px;font-size:13px;">${r.content}</td>
-        <td style="padding:9px 12px;font-size:13px;font-family:var(--mono);text-align:left;white-space:nowrap;">${fmtCost(r.cost)}</td>
-        <td style="padding:9px 12px;font-size:13px;color:var(--muted);">${r.manager}</td>
-        <td style="padding:9px 12px;white-space:nowrap;text-align:right;">
+        <td class="repair-date" data-label="날짜" style="padding:9px 12px;font-size:13px;font-family:var(--mono);">${fmt(r.date)}</td>
+        <td class="repair-device" data-label="설비명" style="padding:9px 12px;font-size:13px;font-weight:500;">${r.device}</td>
+        <td class="repair-cause" data-label="원인" style="padding:9px 12px;font-size:13px;color:var(--muted);">${r.cause}</td>
+        <td class="repair-content" data-label="수리 내용" style="padding:9px 12px;font-size:13px;">${r.content}</td>
+        <td class="repair-cost" data-label="비용" style="padding:9px 12px;font-size:13px;font-family:var(--mono);text-align:left;white-space:nowrap;">${fmtCost(r.cost)}</td>
+        <td class="repair-manager" data-label="담당자" style="padding:9px 12px;font-size:13px;color:var(--muted);">${r.manager}</td>
+        <td class="repair-actions" data-label="관리" style="padding:9px 12px;white-space:nowrap;text-align:right;">
           <button onclick="openRepairModal(${
             r.id})" style="font-size:11px;color:#2d5a8e;background:none;border:1px solid #c8d8ee;border-radius:5px;padding:2px 7px;cursor:pointer;margin-right:4px;">수정</button>
           <button onclick="deleteRepairRow(${
@@ -2285,8 +2399,8 @@
             c.bg};color:${c.fg};border-radius:10px;padding:2px 10px;">${cat}</span>
           <span style="font-size:11px;color:var(--muted);">${items.length}건</span>
         </div>
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
-          <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <div class="repair-table-wrap" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;">
+          <table class="repair-table" style="width:100%;border-collapse:collapse;table-layout:fixed;">
             <colgroup>
               <col style="width:13%;">
               <col style="width:12.5%;">
@@ -3387,3 +3501,5 @@
     </script>
 </body>
 </html>
+
+
