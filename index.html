@@ -1292,10 +1292,9 @@
             <h3 id="m-title"></h3>
             <div class="msub" id="m-sub"></div>
             <label>마지막 교체일자</label>
-            <input type="date" id="m-last">
-            <label>다음 교체일자</label>
-            <input type="date" id="m-next">
-            <button class="auto-btn" onclick="autoCalc()">교체주기로 자동계산</button>
+            <input type="date" id="m-last" oninput="autoCalc()" onchange="autoCalc()">
+            <label>다음 교체일자 (교체주기로 자동계산)</label>
+            <input type="date" id="m-next" readonly>
             <label>담당자</label>
             <input type="text" id="m-manager" placeholder="담당자 이름">
             <label>메모</label>
@@ -1424,6 +1423,53 @@
             return '';
         d.setDate(d.getDate() + n);
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    // 달력 월 기준 가산 (말일 보정: 1/31 + 1개월 → 2/28)
+    function addMonths(iso, n) {
+        const d = parseISO(iso);
+        const months = Number(n);
+        if (!d || !Number.isFinite(months))
+            return '';
+        const day = d.getDate();
+        d.setDate(1);
+        d.setMonth(d.getMonth() + months);
+        const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+        d.setDate(Math.min(day, lastDay));
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    // 다음 교체예정일은 저장값을 쓰지 않고 「마지막교체일 + 교체주기」로 매번 계산한다.
+    function deriveNext(last, interval) {
+        if (!last || !String(last).trim())
+            return '';
+        const months = Number(interval);
+        if (!Number.isFinite(months) || months <= 0)
+            return '';
+        return addMonths(last, months);
+    }
+    // 불러온 데이터 전체의 next 값을 계산값으로 덮어쓴다 (시트 G열 값은 표시에 쓰지 않음).
+    function normalizeNextDates(data) {
+        if (!data || typeof data !== 'object')
+            return data;
+        Object.values(data).forEach(store => {
+            if (!store || typeof store !== 'object')
+                return;
+            Object.values(store).forEach(cat => {
+                if (!cat || typeof cat !== 'object')
+                    return;
+                Object.values(cat).forEach(parts => {
+                    if (!Array.isArray(parts))
+                        return;
+                    parts.forEach(p => {
+                        if (!p || typeof p !== 'object')
+                            return;
+                        const derived = deriveNext(p.last, p.interval);
+                        p.sheetNext = p.next || '';
+                        p.next = derived;
+                    });
+                });
+            });
+        });
+        return data;
     }
 
     function status(nextISO) {
@@ -1564,7 +1610,7 @@
             const cached = JSON.parse(localStorage.getItem(DATA_CACHE_KEY));
             if (!cached || !cached.data || Date.now() - cached.savedAt > DATA_CACHE_TTL)
                 return false;
-            allData = cached.data;
+            allData = normalizeNextDates(cached.data);
             render();
             return true;
         } catch (e) {
@@ -1580,7 +1626,7 @@
         } catch (e) {}
     }
     function applyLoadedData(data) {
-        allData = data;
+        allData = normalizeNextDates(data);
         saveDataCache(allData);
         activeFilter = null;
         render();
@@ -3252,7 +3298,7 @@
         document.getElementById('m-title').textContent = part;
         document.getElementById('m-sub').textContent = `${store} · ${dev} · ${interval}개월 주기`;
         document.getElementById('m-last').value = last || '';
-        document.getElementById('m-next').value = next || '';
+        document.getElementById('m-next').value = deriveNext(last, interval);
         document.getElementById('m-manager').value = '';
         document.getElementById('m-memo').value = '';
         document.getElementById('m-save').disabled = false;
@@ -3264,16 +3310,17 @@
         editTarget = null;
     }
     function autoCalc() {
-        const last = document.getElementById('m-last').value;
-        if (!last || !editTarget)
+        if (!editTarget)
             return;
-        document.getElementById('m-next').value = addDays(last, editTarget.interval * 30);
+        const last = document.getElementById('m-last').value;
+        document.getElementById('m-next').value = deriveNext(last, editTarget.interval);
     }
     async function saveModal() {
         if (!editTarget)
             return;
         const last = document.getElementById('m-last').value;
-        const next = document.getElementById('m-next').value;
+        // 저장할 다음 교체일자도 항상 계산값을 쓴다 (시트 G열 자동 정정).
+        const next = deriveNext(last, editTarget.interval);
         const manager = document.getElementById('m-manager').value.trim();
         const memo = document.getElementById('m-memo').value.trim();
         document.getElementById('m-save').disabled = true;
